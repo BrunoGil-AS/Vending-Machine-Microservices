@@ -14,7 +14,7 @@
     <artifactId>config-server</artifactId>
     <packaging>jar</packaging>
 
-    <n>Config Server</n>
+    <name>Config Server</name>
     <description>Centralized configuration management</description>
 
     <dependencies>

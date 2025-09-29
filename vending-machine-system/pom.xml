@@ -39,8 +39,8 @@
         <mysql.version>8.0.33</mysql.version>
         <hikaricp.version>5.0.1</hikaricp.version>
         
-        <!-- Kafka -->
-        <kafka.version>3.5.1</kafka.version>
+        <!-- Spring Kafka -->
+        <spring-kafka.version>3.0.12</spring-kafka.version>
         
         <!-- Security -->
         <jwt.version>0.11.5</jwt.version>
@@ -89,11 +89,11 @@
                 <version>${hikaricp.version}</version>
             </dependency>
 
-            <!-- Kafka -->
+            <!-- Spring Kafka -->
             <dependency>
                 <groupId>org.springframework.kafka</groupId>
                 <artifactId>spring-kafka</artifactId>
-                <version>${kafka.version}</version>
+                <version>${spring-kafka.version}</version>
             </dependency>
 
             <!-- JWT -->
