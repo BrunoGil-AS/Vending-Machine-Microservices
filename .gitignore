@@ -67,3 +67,4 @@ mysql-data/
 *.bak
 *.swp
 *~.nib
+.github/

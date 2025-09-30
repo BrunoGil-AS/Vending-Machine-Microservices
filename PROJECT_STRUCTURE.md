@@ -100,7 +100,6 @@ VENDING MACHINE/
     │       │   └── resources/
     │       │       ├── application.properties
     │       │       └── db/
-    │       │           └── migration/   # Database migrations (optional)
     │       └── test/
     │           ├── java/
     │           └── resources/
