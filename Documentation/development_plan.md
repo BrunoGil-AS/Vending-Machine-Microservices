@@ -2,612 +2,573 @@
 
 ## Project Overview
 
-**Project Goal: Vending Machine Control System:**
+**Project Goal:**
 
-The system should support the following core functionalities:
+A simplified microservices-based vending machine control system for local development and learning.
 
-1. **Inventory Management** – Track and maintain stock of items available in the vending machine.
-2. **Transaction Handling** – Accept item requests and simulate payment collection.
-3. **Item Dispensing** – Validate payment and simulate item dispensing.
+### Core Functionalities
 
-**Technology Stack:** Java, Spring Boot, Microservices, Eureka Server, Spring Cloud Gateway, JWT Authentication, In-Memory Messaging
-**Purpose:** Learning project to practice Java and Spring Framework concepts
-**Environment:** Local development focused
+1. **Inventory Management** – Track and maintain stock of items
+2. **Transaction Handling** – Accept item requests and process payments
+3. **Item Dispensing** – Validate payment and simulate dispensing
+4. **Administrative Functions** – Stock management and system monitoring
+
+**Technology Stack:** Java 17, Spring Boot, Microservices, Eureka Server, Spring Cloud Gateway, JWT Authentication, Apache Kafka, MySQL
+**Purpose:** Learning project to practice microservices architecture
+**Environment:** Local development only
 **Duration:** 17 working days (3.5 weeks)
-**Daily Hours:** 6 hours
-**Total Effort:** 102 hours
+**Daily Hours:** 9 hours
+**Total Effort:** 153 hours
 
-## Updated Architecture Components
+## Updated Architecture
 
-### Core Services
+### Core Services (Mandatory)
 
-1. **Config Server** - Centralized configuration management
+1. **Config Server** - Local file-based configuration management
 2. **Eureka Server** - Service discovery and registration
-3. **API Gateway** - Authentication, authorization, and routing (replaces separate Auth Service)
-4. **Inventory Service** - Stock management with event-driven updates
-5. **Payment Service** - Payment processing
-6. **Transaction Service** - Order orchestration with saga pattern
-7. **Dispensing Service** - Item dispensing control
-8. **Notification Service** - Alerts and notifications
+3. **API Gateway** - JWT authentication and routing
+4. **Inventory Service** - Stock management
+5. **Payment Service** - Simulated payment processing
+6. **Transaction Service** - Purchase flow orchestration
+7. **Dispensing Service** - Item dispensing simulation
+8. **Notification Service** - Alert logging and storage
 
-### Supporting Infrastructure
+### Infrastructure Components
 
-- **Message Broker**: In-memory events with Spring Application Events (no external broker needed)
-- **Database**: MySQL for all services (separate databases per service) - manual schema creation
-- **Cache**: Simple in-memory caching with Spring Cache abstraction
-- **Authentication**: Gateway-centric JWT with MySQL database for user management
-- **Monitoring**: Spring AOP aspects for performance monitoring and thresholds
-- **Logging**: Logback with structured logging policies and correlation IDs across all services
+- **Message Broker**: Apache Kafka with Zookeeper (local)
+- **Database**: Single MySQL server with separate databases per service
+- **Authentication**: Gateway-only JWT with MySQL storage
+- **Service Discovery**: Eureka Server for all services
 
-## Phase 1: Infrastructure & Authentication (Days 1-5)
+## Kafka Topics Design
 
-### Day 1 - Requirements Analysis & Updated System Design
+```yaml
+Topics:
+  - transaction-events: Transaction lifecycle events
+  - payment-events: Payment processing events
+  - inventory-events: Stock level changes
+  - dispensing-events: Item dispensing results
+  - notification-events: System alerts and notifications
+```
 
-**Duration:** 7 hours
+## Database Structure
 
-- Review and update functional requirements with messaging architecture
-- Define authentication requirements (Gateway-centric JWT approach)
-- Update system architecture to include event-driven patterns
-- Plan hybrid synchronous/asynchronous communication patterns
-- Design database schema with audit trail requirements
-- Create updated component diagrams
-- Plan messaging topology and event sourcing strategy
+```yaml
+MySQL Databases (Manual Schema Creation):
+  - vending_config: Config server data
+  - vending_auth: Users and JWT tokens
+  - vending_inventory: Products and stock levels
+  - vending_payment: Payment transactions
+  - vending_transaction: Orders and purchase history
+  - vending_dispensing: Dispensing operations
+  - vending_notification: System notifications
+```
 
-### Day 2 - Infrastructure Setup & Configuration
+## Port Allocation
 
-**Duration:** 6 hours
+```yaml
+Infrastructure:
+  - Config Server: 8888
+  - Eureka Server: 8761
+  - API Gateway: 8080
+  - Kafka: 9092
+  - Zookeeper: 2181
+  - MySQL: 3306
 
-- Set up project structure with Maven multi-module setup
-- Configure development environment (IDE, Maven, Java 17)
-- **Set up MySQL databases for each service**:
-  - Create separate databases (vending_config, vending_auth, vending_inventory, etc.)
-  - Configure connection pooling with HikariCP
-  - Create initial SQL scripts for manual schema setup
-- Set up Config Server with local file-based configurations
-- Configure Eureka Server for service discovery
-- **Set up common logging configuration**:
-  - Configure Logback with structured JSON logging
-  - Define logging levels per service
-  - Set up correlation ID generation and propagation
-- Create Spring profiles for local development with MySQL
+Services:
+  - Inventory Service: 8081
+  - Payment Service: 8082
+  - Transaction Service: 8083
+  - Dispensing Service: 8084
+  - Notification Service: 8085
+```
 
-### Day 3 - API Gateway with Authentication & Common Logging
+---
 
-**Duration:** 6 hours
+## Development Timeline
 
-- **Create Spring Cloud Gateway** with basic routing
-- **Implement simple JWT authentication system**:
-  - JPA user management with admin_users table (MySQL database)
+### Phase 1: Infrastructure Setup (Days 1-4)
+
+#### Day 1 - Environment Setup & Configuration
+
+**Tasks:**
+
+- Set up Maven multi-module project structure
+- Configure local development environment (Java 17, MySQL, Kafka)
+- Install and configure Kafka + Zookeeper locally
+- Create MySQL databases for each service
+- Set up basic project dependencies and Spring Boot versions
+- Create common libraries for shared DTOs and utilities
+
+**Deliverables:**
+
+- Working development environment
+- Maven project structure
+- Local Kafka and MySQL running
+- Basic project skeleton
+
+#### Day 2 - Config Server & Eureka Setup
+
+**Tasks:**
+
+- Implement Config Server with local `application.properties` files
+- Configure separate property files for each service
+- Set up Eureka Server with basic configuration
+- Create service registration configurations
+- Test service discovery functionality
+- Configure logging patterns for all services
+
+**Deliverables:**
+
+- Working Config Server
+- Working Eureka Server
+- Service registration templates
+- Basic logging configuration
+
+#### Day 3 - API Gateway with JWT Authentication
+
+**Tasks:**
+
+- Create Spring Cloud Gateway with basic routing
+- Implement JWT authentication system:
+  - User entity with SUPER_ADMIN and ADMIN roles
   - BCrypt password hashing
-  - JWT token generation and validation
-  - Basic role-based access control (ADMIN, USER)
-- **Configure route security**:
-  - Public routes for customer operations
-  - Protected routes for admin operations
-- **Implement correlation ID management**:
-  - Generate correlation IDs for each request
-  - Propagate correlation IDs to downstream services
-  - Add correlation ID to all log entries
-- **Implement basic user management endpoints**:
-  - Admin login endpoint
-  - Simple user creation for testing
-- **Test authentication flows with Postman**
+  - JWT token generation and validation (8-hour expiry)
+  - MySQL database integration for user storage
+- Configure protected and public routes
+- Implement user context header propagation
+- Create admin login endpoint
 
-### Day 4 - Service Discovery & Gateway Integration
+**Deliverables:**
 
-**Duration:** 7 hours
+- Working API Gateway
+- JWT authentication system
+- User management database schema
+- Login functionality
 
-- **Complete Gateway routing configuration**:
-  - Service discovery integration with Eureka
-  - Dynamic route configuration
-  - Load balancing setup
-- **Implement user context propagation**:
-  - Add X-User-Id, X-User-Role, X-Username headers
-  - Create header-based authorization for downstream services
-- **Add comprehensive error handling**:
-  - Authentication error responses
-  - Authorization failure handling
-  - Circuit breaker integration
-- **Implement health checks and monitoring**
-- **Create admin user seeding for development**
+#### Day 4 - Gateway Integration & Testing
 
-### Day 5 - Simple Event System & Service Communication
+**Tasks:**
 
-**Duration:** 6 hours
+- Complete gateway routing to downstream services
+- Implement service discovery integration with Eureka
+- Add comprehensive error handling for authentication
+- Create user management endpoints (create, update, delete users)
+- Implement request/response logging
+- Create Postman collection for authentication testing
 
-- **Implement Spring Application Events for local messaging**:
-  - Create custom event classes (InventoryUpdateEvent, PaymentEvent, etc.)
-  - Use @EventListener for asynchronous event processing
-  - Simple event publishing with ApplicationEventPublisher
-- **Design basic event schema**:
-  - InventoryUpdateEvent: Stock level changes
-  - TransactionEvent: Purchase completions
-  - PaymentEvent: Payment status updates
-- **Create base event handling infrastructure**:
-  - Abstract event publisher service
-  - Event listener base classes
-  - Simple correlation ID tracking
-- **Test basic event publishing and consumption**
-- **Focus on learning Spring Events and async processing**
+**Deliverables:**
 
-## Phase 2: Core Business Services (Days 6-12)
+- Complete gateway functionality
+- User management system
+- Authentication testing suite
+- Documentation for API usage
 
-### Day 6 - Inventory Service with Event-Driven Architecture
+### Phase 2: Core Business Services (Days 5-10)
 
-**Duration:** 7 hours
+#### Day 5 - Inventory Service Foundation
 
-- **Create inventory service with dual communication patterns**:
-  - Synchronous endpoints for real-time stock checks
-  - Asynchronous event processing for stock updates
-- **Implement core entities**: Product, Stock, StockTransaction
-- **Create synchronous APIs**:
-  - `GET /api/inventory/availability/{itemId}` (public)
-  - `POST /api/admin/inventory/items` (admin only)
-  - `PUT /api/admin/inventory/stock/{itemId}` (admin only)
-- **Implement event consumers**:
-  - Listen to `item-dispensed` events
-  - Update stock levels asynchronously
-  - Publish `low-stock-alert` events
-- **Add header-based authorization** (X-User-Role validation)
-- **Implement caching for frequent stock checks**
-- **Write unit tests for both sync and async operations**
+**Tasks:**
 
-### Day 7 - Inventory Service Enhancement & Event Publishing
+- Create Inventory Service with Eureka registration
+- Design and implement core entities:
+  - Product (id, name, price, description)
+  - Stock (productId, quantity, minThreshold)
+- Implement basic REST endpoints:
+  - `GET /api/inventory/products` (public)
+  - `GET /api/inventory/availability/{productId}` (public)
+  - `POST /api/admin/inventory/products` (admin)
+  - `PUT /api/admin/inventory/stock/{productId}` (admin)
+- Set up MySQL database connection and manual schema
+- Implement basic validation and error handling
 
-**Duration:** 7 hours
+**Deliverables:**
 
-- **Complete inventory event publishing**:
-  - Publish inventory-update events after stock changes
-  - Implement idempotent event processing
-  - Add event versioning and backward compatibility
-- **Implement advanced inventory features**:
-  - Batch stock updates with event aggregation
-  - Stock reservation for transaction processing
-  - Inventory reporting with audit trail
-- **Add comprehensive validation and error handling**
-- **Implement inventory analytics endpoints**
-- **Integration testing with message broker**
-- **Performance testing for high-volume events**
+- Working Inventory Service
+- Product and stock management
+- Database schema and sample data
+- Basic API endpoints
 
-### Day 8 - Payment Service with Transaction Events
+#### Day 6 - Inventory Service with Kafka Integration
 
-**Duration:** 7 hours
+**Tasks:**
 
-- **Create payment service architecture**:
-  - Payment entities (Transaction, PaymentMethod, PaymentDetails)
-  - Multiple payment method support (cash, card, digital)
-  - Synchronous payment processing for immediate validation
-- **Implement payment processing workflow**:
-  - Payment validation and authorization
-  - Payment capture and confirmation
-  - Refund processing with compensation events
-- **Event integration**:
-  - Publish `payment-processed` events
-  - Listen to `transaction-cancelled` events for refunds
-- **Security implementation**:
-  - PCI DSS compliance considerations
-  - Sensitive data encryption
-  - Audit logging for all payment operations
-- **Error handling and retry mechanisms**
-- **Unit testing with mock payment providers**
+- Integrate Kafka producer for inventory events
+- Implement stock update event publishing
+- Create Kafka consumer for dispensing events (stock reduction)
+- Add low stock threshold monitoring
+- Implement inventory event handlers:
+  - Stock level changes
+  - Product availability updates
+  - Low stock alerts
+- Add comprehensive logging for all operations
 
-### Day 9 - Transaction Service with Saga Pattern
+**Deliverables:**
 
-**Duration:** 7 hours
+- Kafka-integrated inventory service
+- Event-driven stock management
+- Low stock monitoring
+- Complete inventory functionality
 
-- **Implement transaction orchestration service**:
-  - Transaction entities (Order, OrderItem, TransactionState)
-  - Saga pattern for distributed transaction management
-  - State machine for transaction lifecycle
-- **Create synchronous transaction coordination**:
+#### Day 7 - Payment Service Implementation
+
+**Tasks:**
+
+- Create Payment Service with core entities:
+  - PaymentTransaction (id, amount, method, status)
+  - PaymentMethod enum (CASH, CREDIT_CARD, DEBIT_CARD)
+- Implement payment processing simulation:
+  - Cash payment validation
+  - Card payment simulation (success/failure rates)
+  - Payment status tracking
+- Create payment endpoints:
+  - `POST /api/payment/process` (public)
+  - `GET /api/admin/payment/transactions` (admin)
+- Integrate Kafka producer for payment events
+
+**Deliverables:**
+
+- Working Payment Service
+- Simulated payment processing
+- Payment event publishing
+- Payment transaction history
+
+#### Day 8 - Transaction Service Foundation
+
+**Tasks:**
+
+- Create Transaction Service with orchestration logic
+- Design transaction entities:
+  - Transaction (id, customerId, items, totalAmount, status)
+  - TransactionItem (productId, quantity, price)
+- Implement transaction workflow:
   - Inventory availability check
   - Payment processing coordination
-  - Dispensing initiation
-- **Implement saga compensation logic**:
-  - Inventory reservation rollback
-  - Payment refund initiation
-  - Failed transaction cleanup
-- **Event publishing and consumption**:
-  - Publish transaction lifecycle events
-  - Coordinate with other services via events
-- **Add circuit breaker and timeout handling**
-- **Implement transaction audit trail**
+  - Transaction status management
+- Create transaction endpoints:
+  - `POST /api/transaction/purchase` (public)
+  - `GET /api/admin/transaction/history` (admin)
+- Add basic error handling and rollback logic
 
-### Day 10 - Transaction Service Event Integration
+**Deliverables:**
 
-**Duration:** 7 hours
+- Working Transaction Service
+- Purchase orchestration
+- Transaction management
+- Basic workflow implementation
 
-- **Complete event-driven transaction flows**:
-  - Listen to payment completion events
-  - Handle dispensing success/failure events
-  - Implement transaction completion logic
-- **Advanced saga features**:
-  - Saga state persistence
-  - Recovery from partial failures
-  - Long-running transaction support
-- **Transaction reporting and analytics**:
-  - Real-time transaction status
-  - Transaction history with search
-  - Performance metrics and KPIs
-- **Inter-service communication optimization**:
-  - Feign client configuration with circuit breakers
-  - Service-to-service authentication via headers
-- **Comprehensive error scenarios testing**
+#### Day 9 - Transaction Service Kafka Integration
 
-### Day 11 - Dispensing Service with Hardware Simulation
+**Tasks:**
 
-**Duration:** 7 hours
+- Integrate Kafka consumers for payment and dispensing events
+- Implement transaction state management based on events
+- Add transaction completion logic
+- Create transaction event publishers
+- Implement simple compensation logic for failed transactions
+- Add transaction history and reporting features
 
-- **Create dispensing service with event integration**:
-  - Dispensing entities (DispensingAttempt, HardwareStatus, MaintenanceRecord)
-  - Hardware interface simulation
-  - Dispensing verification logic
-- **Implement dispensing workflow**:
-  - Receive dispensing requests from transaction service
-  - Validate dispensing conditions
-  - Execute dispensing operation
-  - Verify successful dispensing
-- **Event publishing**:
-  - Publish `item-dispensed` events on success
-  - Publish `dispensing-failed` events on failure
-- **Hardware simulation features**:
+**Deliverables:**
+
+- Event-driven transaction processing
+- Transaction state management
+- Failure handling and compensation
+- Complete transaction workflow
+
+#### Day 10 - Dispensing Service Implementation
+
+**Tasks:**
+
+- Create Dispensing Service with hardware simulation
+- Design dispensing entities:
+  - DispensingOperation (id, transactionId, productId, status)
+  - HardwareStatus (operational status simulation)
+- Implement dispensing simulation:
   - Configurable success/failure rates
-  - Jam detection simulation
-  - Maintenance mode support
-- **Safety checks and error handling**
-- **Unit testing with various dispensing scenarios**
+  - Hardware jam simulation
+  - Dispensing verification
+- Create Kafka consumer for dispensing requests
+- Implement Kafka producer for dispensing results
+- Add dispensing history and monitoring
 
-### Day 12 - Notification Service & System Integration
+**Deliverables:**
 
-**Duration:** 7 hours
+- Working Dispensing Service
+- Hardware simulation
+- Event-driven dispensing
+- Operation monitoring
 
-- **Create notification service**:
-  - Multi-channel notification support (email, SMS, push, in-app)
-  - Template-based notification generation
-  - Notification history and delivery tracking
-- **Event-driven notification processing**:
-  - Listen to all system events for notification triggers
-  - Low stock alerts to administrators
-  - Transaction receipts to customers
-  - System maintenance notifications
-- **Admin dashboard notifications**:
-  - Real-time system status updates
-  - Alert management and acknowledgment
-  - Notification preferences and routing
-- **Integration with all services**:
-  - Test complete event flow end-to-end
-  - Verify correlation ID propagation
-  - Check error handling across services
-- **Performance testing of message processing**
+### Phase 3: System Integration & Enhancement (Days 11-14)
 
-## Phase 3: Advanced Features & Integration (Days 13-17)
+#### Day 11 - Notification Service & Event Integration
 
-### Day 13 - AOP Performance Monitoring & Logging Enhancement
+**Tasks:**
 
-**Duration:** 6 hours
+- Create Notification Service with Kafka integration
+- Implement notification entities:
+  - Notification (id, type, message, timestamp, status)
+  - NotificationType enum (LOW_STOCK, TRANSACTION_FAILED, etc.)
+- Set up Kafka consumers for all notification events:
+  - Inventory alerts
+  - Transaction notifications
+  - Payment failures
+  - Dispensing issues
+- Implement notification logging and storage
+- Create admin endpoints for notification management
 
-- **Implement comprehensive AOP aspects**:
-  - Method execution timing with detailed metrics
-  - Database operation monitoring
-  - Service-to-service call monitoring
-  - Memory usage tracking aspects
-- **Set up performance thresholds**:
-  - Configurable thresholds per service and operation type
-  - Automatic alerting for threshold violations
-  - Performance degradation detection
-- **Enhance logging infrastructure**:
-  - Structured JSON logging for all services
-  - Context-aware logging with business operation details
-  - Log aggregation patterns for easier debugging
-- **Create performance monitoring dashboard endpoints**:
-  - Real-time performance metrics via Actuator
-  - Service health indicators with performance data
-  - Custom metrics for business operations
-- **End-to-end transaction performance testing**
+**Deliverables:**
 
-### Day 14 - Error Handling & Resilience Patterns
+- Working Notification Service
+- Complete event consumption
+- Notification storage and retrieval
+- System-wide alert handling
 
-**Duration:** 7 hours
+#### Day 12 - End-to-End Integration Testing
 
-- **Implement advanced error handling**:
-  - Global exception handling across all services
-  - Structured error responses
-  - Error correlation and tracking
-- **Resilience pattern implementation**:
-  - Retry mechanisms with exponential backoff
-  - Bulkhead isolation for critical resources
-  - Timeout configurations
-- **Dead letter queue processing**:
-  - Failed event handling
-  - Manual retry mechanisms
-  - Error analysis and reporting
-- **Chaos engineering tests**:
-  - Service failure simulation
-  - Network partition testing
-  - Database connection failure handling
-- **Recovery scenario testing**
+**Tasks:**
 
-### Day 15 - Security Enhancement & Audit Trail
+- Test complete purchase flow from inventory check to dispensing
+- Verify all Kafka event flows work correctly
+- Test failure scenarios and error handling
+- Validate user authentication and authorization
+- Test admin operations across all services
+- Performance testing with concurrent requests
+- Fix integration issues and improve error handling
 
-**Duration:** 7 hours
+**Deliverables:**
 
-- **Enhanced security implementation**:
-  - API rate limiting per user role
-  - Request/response encryption for sensitive data
-  - Advanced JWT features (refresh tokens, token revocation)
-- **Comprehensive audit trail**:
-  - All admin operations logging
-  - Event sourcing for complete transaction history
-  - Audit report generation
-- **Security testing**:
-  - Authentication bypass attempts
-  - Authorization escalation testing
-  - SQL injection and XSS protection
-- **Compliance features**:
-  - GDPR compliance for customer data
-  - PCI DSS compliance for payment data
-  - Data retention policies
-- **Security monitoring and alerting**
+- Fully integrated system
+- Working end-to-end flows
+- Validated error handling
+- Performance baseline
 
-### Day 16 - Performance Optimization & Caching
+#### Day 13 - System Monitoring & Observability
 
-**Duration:** 7 hours
+**Tasks:**
 
-- **Performance optimization**:
-  - Database query optimization
-  - Connection pool tuning
-  - JVM performance tuning
-- **Caching implementation**:
-  - Redis integration for frequently accessed data
-  - Cache invalidation strategies
-  - Distributed caching for inventory data
-- **Message broker optimization**:
-  - Queue configuration tuning
-  - Consumer scaling strategies
-  - Message batching optimization
-- **Load testing**:
-  - Concurrent transaction processing
-  - High-volume event processing
-  - System resource utilization
-- **Performance monitoring setup**
+- Add Spring Boot Actuator to all services
+- Implement health checks for each service
+- Add custom metrics for business operations:
+  - Transaction success rates
+  - Inventory levels
+  - Payment processing times
+  - Dispensing success rates
+- Create monitoring endpoints for admin dashboard
+- Implement correlation ID tracking across services
+- Add structured logging for better debugging
 
-### Day 17 - Integration Testing & Quality Assurance
+**Deliverables:**
 
-**Duration:** 7 hours
+- Comprehensive monitoring
+- Health check endpoints
+- Business metrics tracking
+- Improved observability
 
-- **Comprehensive integration testing**:
-  - End-to-end transaction scenarios
-  - Error scenario testing
-  - Performance regression testing
-- **Contract testing implementation**:
-  - API contract validation
-  - Event schema validation
-  - Service compatibility testing
-- **Security penetration testing**:
-  - Authentication security testing
-  - Authorization bypass testing
-  - Data encryption validation
-- **System reliability testing**:
-  - Service restart scenarios
-  - Network failure recovery
-  - Database failover testing
-- **Documentation of test results and fixes**
+#### Day 14 - Security & Data Validation
 
-## Phase 4: Testing & Documentation (Days 15-17)
+**Tasks:**
 
-### Day 15 - Security Enhancement & Audit Trail
+- Enhance input validation across all services
+- Implement request rate limiting at gateway level
+- Add data sanitization for user inputs
+- Enhance JWT security with proper secret management
+- Implement audit logging for admin operations
+- Add security headers and CORS configuration
+- Test security measures and fix vulnerabilities
 
-**Duration:** 6 hours
+**Deliverables:**
 
-- **Enhanced security implementation**:
-  - API rate limiting per user role
-  - Advanced JWT features (token refresh, validation)
-  - Input validation and sanitization
-- **Comprehensive audit trail**:
-  - All admin operations logging with correlation IDs
-  - Event sourcing for complete transaction history
-  - Audit report generation endpoints
-- **Security testing**:
-  - Authentication bypass testing
-  - Authorization escalation testing
-  - Input validation testing
-- **Local security monitoring**:
-  - Failed login attempt tracking
-  - Suspicious activity detection
-  - Security event logging with structured format
+- Enhanced security implementation
+- Input validation and sanitization
+- Audit logging
+- Security testing results
 
-### Day 16 - Performance Optimization & Local Testing
+### Phase 4: Testing & Final Integration (Days 15-17)
 
-**Duration:** 6 hours
+#### Day 15 - Comprehensive Testing Suite
 
-- **Performance optimization**:
-  - Database query optimization and analysis
-  - Connection pool tuning for local MySQL
-  - JVM performance tuning for development
-- **Caching implementation**:
-  - In-memory caching for frequently accessed data
-  - Cache invalidation strategies
-  - Cache hit/miss metrics with AOP
-- **AOP performance monitoring enhancement**:
-  - Advanced performance metrics collection
-  - Business operation timing analysis
-  - Memory usage monitoring
-- **Load testing with simple tools**:
-  - Concurrent transaction testing with simple scripts
-  - Performance threshold validation
-  - System resource utilization monitoring
+**Tasks:**
 
-### Day 17 - Integration Testing & Final Documentation
+- Create unit tests for all service layers
+- Implement integration tests using local MySQL
+- Create Kafka integration tests with test topics
+- Build comprehensive Postman collection for all APIs
+- Test various failure scenarios:
+  - Service unavailability
+  - Database connection failures
+  - Kafka broker issues
+- Document test scenarios and results
 
-**Duration:** 6 hours
+**Deliverables:**
 
-- **Comprehensive integration testing**:
-  - End-to-end transaction scenarios testing
-  - Error scenario testing and validation
-  - Service communication testing
-- **Testing framework implementation**:
-  - Unit tests for all critical components
-  - Integration tests with TestContainers (MySQL)
-  - Mock testing for external dependencies
-- **Final system validation**:
-  - Complete transaction flow testing
-  - Performance validation against learning objectives
-  - Security compliance verification for local environment
-- **Project documentation creation**:
-  - API documentation with examples
-  - Architecture decision records for learning
-  - Setup and running guides
-  - Learning outcomes documentation
-  - Future enhancement suggestions for continued learning
+- Complete test suite
+- Integration test coverage
+- API testing collection
+- Failure scenario documentation
 
-## Updated Port Allocation
+#### Day 16 - Performance Optimization & Documentation
 
-### Local Development Environment
+**Tasks:**
 
-```plain
-- Config Server: 8888
-- Eureka Server: 8761
-- API Gateway: 8080 (includes authentication)
-- Inventory Service: 8081
-- Payment Service: 8082
-- Transaction Service: 8083
-- Dispensing Service: 8084
-- Notification Service: 8085
-- MySQL: 3306 (multiple databases)
+- Optimize database queries and connections
+- Tune Kafka producer/consumer configurations
+- Implement caching for frequently accessed data
+- Optimize service startup times
+- Create comprehensive API documentation
+- Write service setup and configuration guides
+- Document Kafka topic schemas and event flows
+- Create troubleshooting guide
+
+**Deliverables:**
+
+- Optimized system performance
+- Complete documentation
+- Setup and deployment guides
+- Troubleshooting documentation
+
+#### Day 17 - Final Integration & Demo Preparation
+
+**Tasks:**
+
+- Final end-to-end testing of all scenarios
+- Create demo data and sample scenarios
+- Prepare demo script for system showcase
+- Final bug fixes and performance tuning
+- Create project presentation and learning outcomes summary
+- Document lessons learned and future enhancements
+- Prepare handover documentation
+
+**Deliverables:**
+
+- Production-ready demo system
+- Demo materials and scripts
+- Project documentation
+- Learning outcomes summary
+
+---
+
+## Technical Specifications
+
+### Authentication & Security
+
+- **JWT Token Expiry**: 8 hours
+- **Supported Roles**: SUPER_ADMIN, ADMIN
+- **Password Hashing**: BCrypt with salt
+- **Security Headers**: CORS, CSRF protection
+- **Rate Limiting**: 100 requests/minute per user
+
+### Kafka Configuration
+
+```yaml
+Event Schema:
+  transaction-events:
+    - transaction.created
+    - transaction.completed
+    - transaction.failed
+  payment-events:
+    - payment.initiated
+    - payment.completed
+    - payment.failed
+  inventory-events:
+    - stock.updated
+    - stock.low
+    - product.added
+  dispensing-events:
+    - dispensing.requested
+    - dispensing.completed
+    - dispensing.failed
+  notification-events:
+    - notification.created
+    - notification.sent
 ```
 
-### Database Structure (Manual Setup)
+### Database Schema Guidelines
 
-```plain
-- vending_config     (Config Server data)
-- vending_auth       (Users and authentication)
-- vending_inventory  (Products and stock)
-- vending_payment    (Payment transactions)
-- vending_transaction (Orders and orchestration)
-- vending_dispensing (Hardware control)
-- vending_notification (Alerts and messages)
+- **Primary Keys**: Auto-increment integers
+- **Timestamps**: CreatedAt, UpdatedAt for all entities
+- **Soft Deletes**: Where applicable
+- **Indexes**: On frequently queried fields
+- **Constraints**: Foreign keys and data validation
+
+### API Response Format
+
+```json
+{
+  "success": true,
+  "data": {},
+  "message": "Operation completed successfully",
+  "timestamp": "2024-01-01T10:00:00Z",
+  "correlationId": "uuid"
+}
 ```
 
-### Learning Focus Areas
+---
 
-```plain
-- Spring Boot fundamentals and auto-configuration
-- Spring Data JPA with MySQL database
-- Manual database schema creation and management
-- Spring Cloud Gateway and service routing
-- JWT authentication with Spring Security
-- Spring Application Events for messaging
-- Spring AOP for cross-cutting concerns (performance monitoring)
-- Structured logging with Logback and correlation IDs
-- Performance monitoring and threshold management
-- Microservices communication patterns
-- RESTful API design and testing
-```
+## Success Criteria
 
-## Key Technology Updates
+### Functional Requirements
 
-### Authentication Stack
+- Complete purchase flow from product selection to dispensing
+- Admin authentication and user management
+- Real-time inventory tracking and updates
+- Simulated payment processing for cash and card
+- Item dispensing simulation with failure scenarios
+- System-wide notification and alert handling
 
-- **Spring Cloud Gateway** with standard (non-reactive) approach for simplicity
-- **Spring Security** with JWT support
-- **Spring Data JPA** for database access
-- **BCrypt** for password hashing
-- **MySQL Database** for user storage (manual schema setup)
+### Technical Requirements
 
-### Monitoring & Performance Stack
+- All services registered with Eureka
+- Configuration managed through Config Server
+- JWT authentication at gateway level
+- Kafka-based event-driven communication
+- MySQL database per service with manual schemas
+- Comprehensive logging and monitoring
+- REST API with proper error handling
 
-- **Spring AOP** for performance monitoring aspects
-- **Custom annotations** (@PerformanceMonitor, @LogExecution)
-- **Performance thresholds** with configurable limits
-- **Method execution timing** and slow operation detection
+### Performance Requirements
 
-### Messaging Stack
+- API response times under 2 seconds
+- Support for 50+ concurrent users
+- Database queries optimized for common operations
+- Kafka message processing under 100ms
+- Service startup time under 30 seconds
 
-- **Spring Application Events** for in-memory messaging
-- **@Async and @EventListener** for asynchronous processing
-- **Simple event sourcing** for audit trail
-- **CompletableFuture** for advanced async patterns
+### Quality Requirements
 
-### Logging Stack
+- 80%+ test coverage for business logic
+- Comprehensive API documentation
+- Clean, maintainable code following SOLID principles
+- Proper error handling and user feedback
+- Security best practices implemented
 
-- **Logback** with structured JSON logging
-- **Correlation IDs** for request tracing across services
-- **Service-specific log levels** (DEBUG, INFO, WARN, ERROR)
-- **Business operation logging** for audit trails
-- **Performance metrics logging** with execution times
+---
 
-### Learning Stack
+## Risk Mitigation
 
-- **Maven** for dependency management
-- **MySQL** for relational database practice
-- **HikariCP** for connection pooling
-- **Spring Boot Actuator** for health checks
-- **Spring Boot DevTools** for hot reloading
-- **Postman** for API testing
+### Technical Risks
 
-## Success Criteria Updates
+- **Kafka Setup Complexity**: Provide detailed setup scripts and documentation
+- **Service Communication**: Implement proper timeout and retry mechanisms
+- **Database Consistency**: Use proper transaction boundaries
+- **JWT Security**: Implement proper secret management and token validation
 
-### Authentication Requirements
+### Development Risks
 
-- JWT-based authentication with 8-hour token expiry
-- Role-based access control (SUPER_ADMIN, ADMIN)
-- Gateway-centric security with header propagation
-- Admin user management with hierarchical permissions
-- Complete audit trail for all admin operations
+- **Time Management**: Daily progress tracking and scope adjustment
+- **Integration Issues**: Early and frequent integration testing
+- **Learning Curve**: Focus on core concepts first, advanced features later
+- **Environment Issues**: Detailed setup documentation and troubleshooting guides
 
-### Messaging Requirements
+---
 
-- Hybrid synchronous/asynchronous communication
-- Event-driven inventory updates
-- Saga pattern for distributed transactions
-- Circuit breaker pattern for resilience
-- At-least-once delivery with idempotent processing
+## Future Enhancements (Out of Scope)
 
-### Performance Requirements (Local Learning Environment)
-
-- API responses under 2 seconds (relaxed for local development)
-- Event processing within reasonable time for learning
-- Support for basic concurrent testing (10-20 requests)
-- Smooth development experience with hot reloading
-- Fast service startup times for iterative development
-
-### Learning Requirements
-
-- Clean, well-documented code for learning reference
-- Comprehensive unit tests to practice testing frameworks
-- Simple but realistic business logic implementation
-- Good separation of concerns and SOLID principles
-- Practical examples of Spring Framework features
-- AOP implementation for performance monitoring
-- Structured logging with correlation IDs
-- Security implementation with JWT and role-based access
-
-### Local Development Requirements
-
-- Simple monitoring with Spring Boot Actuator and custom metrics
-- Structured logging for debugging and learning
-- Easy service restart and testing workflows
-- Clear documentation for learning purposes and future reference
-- Simple configuration management with Spring profiles
-- Performance monitoring with configurable thresholds
-- Manual database setup for better understanding of schema design
-
-## Risk Mitigation Updates
-
-### Authentication Risks
-
-- **JWT secret management**: Environment-specific secrets
-- **Token expiry handling**: Automatic refresh mechanisms
-- **Role escalation**: Strict permission validation
-
-### Messaging Risks
-
-- **Event ordering**: Message sequence guarantees
-- **Duplicate processing**: Idempotent event handlers
-- **Dead letter handling**: Failed message recovery
-
-### Integration Risks
-
-- **Service dependencies**: Circuit breaker implementation
-- **Data consistency**: Saga compensation patterns
-- **Performance degradation**: Load testing and optimization
+- Real payment gateway integration
+- Advanced caching with Redis
+- Container orchestration with Docker/Kubernetes
+- Advanced monitoring with Prometheus/Grafana
+- Message persistence and replay capabilities
+- Advanced security features (OAuth2, refresh tokens)
+- Multi-channel notification delivery
+- Real hardware integration
+- Advanced analytics and reporting
