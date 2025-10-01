@@ -1,4 +1,4 @@
-package com.vendingmachine.gateway.User.DTO;
+package com.vendingmachine.gateway.User.Login.DTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -6,17 +6,15 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * User Response DTO
+ * Login Response DTO
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserResponse {
-    private Long id;
+public class LoginResponse {
+    private String token;
     private String username;
     private String role;
-    private Boolean active;
-    private String createdAt;
-    private String updatedAt;
+    private Long expiresIn; // in seconds
 }

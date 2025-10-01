@@ -15,6 +15,8 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 @SpringBootApplication
 @EnableDiscoveryClient
 public class ApiGatewayApplication {
+
+    //inject the port from application.properties
     
     public static void main(String[] args) {
         SpringApplication.run(ApiGatewayApplication.class, args);

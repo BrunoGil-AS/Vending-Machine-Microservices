@@ -14,7 +14,7 @@
     <artifactId>api-gateway</artifactId>
     <packaging>jar</packaging>
 
-    <name>API Gateway</name>
+        <name>API Gateway</name>
     <description>Entry point with authentication and routing</description>
 
     <dependencies>
@@ -122,6 +122,17 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.vendingmachine.gateway.ApiGatewayApplication</mainClass>
+                    <layout>JAR</layout>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
