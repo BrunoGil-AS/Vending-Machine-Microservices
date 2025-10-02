@@ -1,15 +1,17 @@
 spring:
   cloud:
     gateway:
-      discovery:
-        locator:
-          enabled: true
-          lower-case-service-id: true
-      routes:
-        - id: test-service
-          uri: http://localhost:8081
-          predicates:
-            - Path=/api/test/**
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
+          routes:
+            - id: test-service
+              uri: http://localhost:8081
+              predicates:
+                - Path=/api/test/**
 
 management:
   endpoints:

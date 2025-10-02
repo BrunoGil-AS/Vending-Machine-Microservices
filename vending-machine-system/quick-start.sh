@@ -82,7 +82,7 @@ if [ "$ACTION" == "start" ]; then
                 profile=""
                 ;;
             *)
-                profile="dev"
+                profile="default"
                 ;;
         esac
 
