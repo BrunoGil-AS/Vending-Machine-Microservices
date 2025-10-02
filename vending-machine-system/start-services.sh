@@ -32,9 +32,18 @@ check_service() {
     local port=$1
     local service_name=$2
     
-    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null ; then
-        print_error "$service_name is already running on port $port"
-        return 1
+    if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+        # Check for Windows
+        if netstat -aon | grep ":$port" | grep "LISTENING" > /dev/null; then
+            print_error "$service_name is already running on port $port"
+            return 1
+        fi
+    else
+        # Check for Linux/macOS
+        if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null ; then
+            print_error "$service_name is already running on port $port"
+            return 1
+        fi
     fi
     return 0
 }
@@ -72,8 +81,18 @@ start_service() {
     
     print_info "Starting $service_name on port $port..."
     
-    nohup java -jar $jar_path > logs/${service_name}.log 2>&1 &
-    local pid=$!
+    local pid
+
+    if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+        # Windows (Git Bash)
+        java -jar $jar_path > logs/${service_name}.log 2>&1 &
+        pid=$!
+    else
+        # Linux/macOS
+        nohup java -jar $jar_path > logs/${service_name}.log 2>&1 &
+        pid=$!
+    fi
+    
     echo $pid > logs/${service_name}.pid
     
     if wait_for_service $port "$service_name" $wait_time; then
@@ -81,7 +100,11 @@ start_service() {
         return 0
     else
         print_error "$service_name failed to start"
-        kill $pid 2>/dev/null
+        if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+            taskkill /F /PID $pid > /dev/null 2>&1
+        else
+            kill $pid 2>/dev/null
+        fi
         return 1
     fi
 }

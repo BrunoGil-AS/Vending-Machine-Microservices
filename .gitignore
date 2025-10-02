@@ -25,7 +25,6 @@ bin/
 
 # IDE - VS Code
 .vscode/
-
 # Compiled class files
 *.class
 
@@ -67,4 +66,7 @@ mysql-data/
 *.bak
 *.swp
 *~.nib
+
+# Others
 .github/
+.pids/

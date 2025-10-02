@@ -26,6 +26,7 @@ public class AuthControllerTest {
     @Autowired
     private WebTestClient webTestClient;
 
+    @SuppressWarnings("removal")
     @MockBean
     private AuthService authService;
 
