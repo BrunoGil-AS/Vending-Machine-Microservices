@@ -50,6 +50,7 @@ fi
 # Build all modules
 print_info "Building all modules..."
 mvn clean package -DskipTests
+mvn clean install -DskipTests
 if [ $? -eq 0 ]; then
     print_success "Build completed successfully"
 else
