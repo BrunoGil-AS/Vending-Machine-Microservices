@@ -239,9 +239,3 @@ curl -X GET http://localhost:8080/api/admin/inventory/products \
 ## 👥 Authors
 
 - Bruno Gil Ramirez
-
-## 🙏 Acknowledgments
-
-- Spring Boot and Spring Cloud communities
-- Apache Kafka documentation
-- Microservices patterns and best practices
