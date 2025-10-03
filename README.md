@@ -209,7 +209,6 @@ curl -X GET http://localhost:8080/api/admin/inventory/products \
 ### Public Endpoints
 
 - `GET /api/inventory/products` - List all products
-- `GET /api/inventory/availability/{productId}` - Check product availability
 - `POST /api/transaction/purchase` - Make a purchase
 - `POST /api/auth/login` - Admin login
 
@@ -229,49 +228,17 @@ curl -X GET http://localhost:8080/api/admin/inventory/products \
 - `dispensing-events` - Item dispensing results
 - `notification-events` - System alerts and notifications
 
-## 🐛 Troubleshooting
 
-### Services not registering with Eureka
-
-- Ensure Eureka Server is running
-- Check network connectivity
-- Verify `application.properties` has correct Eureka URL
-
-### Database connection errors
-
-- Verify MySQL is running
-- Check database credentials
-- Ensure databases are created
-
-### Kafka connection errors
-
-- Verify Kafka and Zookeeper are running
-- Check Kafka bootstrap server configuration
-- Ensure topics are created
-
-### Port already in use
-
-- Check if services are already running: `lsof -i :<port>`
-- Kill existing processes or change port in configuration
 
 ## 📚 Documentation
 
 - [Development Plan](docs/development-plan.md)
-- [API Documentation](docs/api-documentation.md)
-- [Architecture Guide](docs/architecture.md)
-- [Deployment Guide](docs/deployment.md)
 
-## 🤝 Contributing
 
-This is a learning project. Contributions, issues, and feature requests are welcome!
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 👥 Authors
 
-- Your Name - Initial work
+- Bruno Gil Ramirez
 
 ## 🙏 Acknowledgments
 
