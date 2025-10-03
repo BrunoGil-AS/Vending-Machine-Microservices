@@ -64,118 +64,94 @@ VENDING MACHINE/
     │       │       └── application.properties
     │       └── test/
     │
-    ├── api-gateway/                     # API Gateway with Authentication
+    ├── api-gateway/                     # API Gateway with Authentication (Feature-Based)
     │   ├── pom.xml
     │   └── src/
     │       ├── main/
     │       │   ├── java/
     │       │   │   └── com/vendingmachine/gateway/
-    │       │   │       ├── GatewayApplication.java
-    │       │   │       ├── config/      # Gateway configuration
-    │       │   │       ├── filter/      # Custom filters
-    │       │   │       ├── security/    # JWT security
-    │       │   │       ├── entity/      # User entity
-    │       │   │       ├── repository/  # User repository
-    │       │   │       └── service/     # Auth services
+    │       │   │       ├── ApiGatewayApplication.java
+    │       │   │       ├── config/          # Gateway configuration
+    │       │   │       ├── exception/       # Custom exceptions
+    │       │   │       └── User/            # User feature module
+    │       │   │           ├── Auth/
+    │       │   │           ├── DTO/
+    │       │   │           ├── JWT/
+    │       │   │           └── Login/
     │       │   └── resources/
     │       │       ├── application.properties
-    │       │       └── application.yml  # Route configuration
+    │       │       └── db/
+    │       │           └── init-auth-database.sql
     │       └── test/
     │
-    ├── inventory-service/               # Inventory Management Service
+    ├── inventory-service/               # Inventory Management Service (Feature-Based)
     │   ├── pom.xml
     │   └── src/
     │       ├── main/
     │       │   ├── java/
     │       │   │   └── com/vendingmachine/inventory/
     │       │   │       ├── InventoryServiceApplication.java
-    │       │   │       ├── controller/  # REST controllers
-    │       │   │       ├── service/     # Business logic
-    │       │   │       ├── repository/  # Data access
-    │       │   │       ├── entity/      # JPA entities
-    │       │   │       ├── dto/         # DTOs
-    │       │   │       ├── mapper/      # Entity-DTO mappers
-    │       │   │       ├── kafka/       # Kafka producers/consumers
-    │       │   │       └── config/      # Service configuration
+    │       │   │       ├── product/         # Product feature
+    │       │   │       ├── stock/           # Stock feature
+    │       │   │       ├── kafka/           # Kafka producers/consumers
+    │       │   │       └── config/          # Service configuration
     │       │   └── resources/
     │       │       ├── application.properties
     │       │       └── db/
     │       └── test/
-    │           ├── java/
-    │           └── resources/
     │
-    ├── payment-service/                 # Payment Processing Service
+    ├── payment-service/                 # Payment Processing Service (Feature-Based)
     │   ├── pom.xml
     │   └── src/
     │       ├── main/
     │       │   ├── java/
     │       │   │   └── com/vendingmachine/payment/
     │       │   │       ├── PaymentServiceApplication.java
-    │       │   │       ├── controller/
-    │       │   │       ├── service/
-    │       │   │       ├── repository/
-    │       │   │       ├── entity/
-    │       │   │       ├── dto/
-    │       │   │       ├── mapper/
-    │       │   │       ├── kafka/
-    │       │   │       └── config/
+    │       │   │       ├── payment/         # Payment feature
+    │       │   │       ├── kafka/           # Kafka producers/consumers
+    │       │   │       └── config/          # Service configuration
     │       │   └── resources/
     │       │       └── application.properties
     │       └── test/
     │
-    ├── transaction-service/             # Transaction Orchestration Service
+    ├── transaction-service/             # Transaction Orchestration Service (Feature-Based)
     │   ├── pom.xml
     │   └── src/
     │       ├── main/
     │       │   ├── java/
     │       │   │   └── com/vendingmachine/transaction/
     │       │   │       ├── TransactionServiceApplication.java
-    │       │   │       ├── controller/
-    │       │   │       ├── service/
-    │       │   │       ├── repository/
-    │       │   │       ├── entity/
-    │       │   │       ├── dto/
-    │       │   │       ├── mapper/
-    │       │   │       ├── kafka/
-    │       │   │       └── config/
+    │       │   │       ├── transaction/     # Transaction feature
+    │       │   │       ├── kafka/           # Kafka producers/consumers
+    │       │   │       └── config/          # Service configuration
     │       │   └── resources/
     │       │       └── application.properties
     │       └── test/
     │
-    ├── dispensing-service/              # Item Dispensing Service
+    ├── dispensing-service/              # Item Dispensing Service (Feature-Based)
     │   ├── pom.xml
     │   └── src/
     │       ├── main/
     │       │   ├── java/
     │       │   │   └── com/vendingmachine/dispensing/
     │       │   │       ├── DispensingServiceApplication.java
-    │       │   │       ├── controller/
-    │       │   │       ├── service/
-    │       │   │       ├── repository/
-    │       │   │       ├── entity/
-    │       │   │       ├── dto/
-    │       │   │       ├── mapper/
-    │       │   │       ├── kafka/
-    │       │   │       └── config/
+    │       │   │       ├── dispensing/      # Dispensing feature
+    │       │   │       ├── kafka/           # Kafka producers/consumers
+    │       │   │       └── config/          # Service configuration
     │       │   └── resources/
     │       │       └── application.properties
     │       └── test/
     │
-    └── notification-service/            # Notification Service
+    └── notification-service/            # Notification Service (Feature-Based)
         ├── pom.xml
         └── src/
             ├── main/
             │   ├── java/
             │   │   └── com/vendingmachine/notification/
             │   │       ├── NotificationServiceApplication.java
-            │   │       ├── controller/
-            │   │       ├── service/
-            │   │       ├── repository/
-            │   │       ├── entity/
-            │   │       ├── dto/
-            │   │       ├── mapper/
-            │   │       ├── kafka/
-            │   │       └── config/
+            │   │       ├── notification/    # Notification feature
+            │   │       ├── kafka/           # Kafka consumers
+            │   │       └── config/          # Service configuration
             │   └── resources/
             │       └── application.properties
             └── test/
@@ -252,26 +228,29 @@ Service discovery and registration using Netflix Eureka.
 
 #### 4. **api-gateway** (Port 8080)
 
-Single entry point with authentication and routing.
+Single entry point with authentication and routing. Now structured by feature.
 
-**Key Components:**
+**Key Components (Feature-Based):**
 
 ```plaintext
 gateway/
-├── security/                # JWT Security
-│   ├── JwtTokenProvider.java
-│   ├── JwtAuthenticationFilter.java
-│   └── SecurityConfig.java
-├── filter/                  # Custom Gateway Filters
-│   ├── AuthenticationFilter.java
-│   └── LoggingFilter.java
-├── entity/                  # User Entity
-│   └── User.java
-├── repository/              # User Repository
-│   └── UserRepository.java
-└── service/                 # Services
-    ├── AuthService.java
-    └── UserService.java
+├── config/                  # Gateway configuration (routes, etc.)
+│   └── GatewayConfig.java
+├── exception/               # Custom exception classes
+└── User/                    # User feature module
+    ├── AdminUser.java
+    ├── AdminUserRepository.java
+    ├── Auth/
+    │   ├── AuthController.java  # Handles user registration/authentication
+    │   └── AuthService.java
+    ├── DTO/                   # User-related DTOs
+    ├── JWT/
+    │   ├── JwtAuthenticationFilter.java # JWT validation filter
+    │   └── JwtUtil.java         # JWT generation and validation utility
+    └── Login/
+        └── DTO/
+            ├── LoginRequest.java
+            └── LoginResponse.java
 ```
 
 ### Business Service Modules
@@ -287,22 +266,19 @@ Manages product catalog and stock levels.
 - Low stock alerts
 - Inventory event publishing
 
-**Key Components:**
+**Key Components (Feature-Based):**
 
 ```plaintext
 inventory/
-├── controller/
-│   ├── InventoryController.java          # Public endpoints
-│   └── AdminInventoryController.java     # Admin endpoints
-├── service/
-│   ├── InventoryService.java
+├── product/
+│   ├── ProductController.java
 │   ├── ProductService.java
-│   └── StockService.java
-├── entity/
 │   ├── Product.java
-│   └── Stock.java
-├── repository/
-│   ├── ProductRepository.java
+│   └── ProductRepository.java
+├── stock/
+│   ├── StockController.java
+│   ├── StockService.java
+│   ├── Stock.java
 │   └── StockRepository.java
 └── kafka/
     ├── InventoryEventProducer.java
@@ -325,18 +301,15 @@ Simulates payment processing for cash and card payments.
 - Payment status tracking
 - Payment event publishing
 
-**Key Components:**
+**Key Components (Feature-Based):**
 
 ```plaintext
 payment/
-├── controller/
-│   └── PaymentController.java
-├── service/
+├── payment/
+│   ├── PaymentController.java
 │   ├── PaymentService.java
-│   └── PaymentSimulationService.java
-├── entity/
-│   └── PaymentTransaction.java
-├── repository/
+│   ├── PaymentSimulationService.java
+│   ├── PaymentTransaction.java
 │   └── PaymentTransactionRepository.java
 └── kafka/
     └── PaymentEventProducer.java
@@ -358,19 +331,16 @@ Orchestrates the complete purchase flow.
 - Transaction state management
 - Compensation logic
 
-**Key Components:**
+**Key Components (Feature-Based):**
 
 ```plaintext
 transaction/
-├── controller/
-│   └── TransactionController.java
-├── service/
+├── transaction/
+│   ├── TransactionController.java
 │   ├── TransactionService.java
-│   └── TransactionOrchestrationService.java
-├── entity/
+│   ├── TransactionOrchestrationService.java
 │   ├── Transaction.java
-│   └── TransactionItem.java
-├── repository/
+│   ├── TransactionItem.java
 │   ├── TransactionRepository.java
 │   └── TransactionItemRepository.java
 └── kafka/
@@ -395,18 +365,15 @@ Simulates hardware dispensing operations.
 - Success/failure rate configuration
 - Dispensing result reporting
 
-**Key Components:**
+**Key Components (Feature-Based):**
 
 ```plaintext
 dispensing/
-├── controller/
-│   └── DispensingController.java
-├── service/
+├── dispensing/
+│   ├── DispensingController.java
 │   ├── DispensingService.java
-│   └── HardwareSimulationService.java
-├── entity/
-│   └── DispensingOperation.java
-├── repository/
+│   ├── HardwareSimulationService.java
+│   ├── DispensingOperation.java
 │   └── DispensingOperationRepository.java
 └── kafka/
     ├── DispensingEventConsumer.java
@@ -428,17 +395,14 @@ Handles system-wide notifications and alerts.
 - Alert management
 - System status notifications
 
-**Key Components:**
+**Key Components (Feature-Based):**
 
 ```plaintext
 notification/
-├── controller/
-│   └── NotificationController.java
-├── service/
-│   └── NotificationService.java
-├── entity/
-│   └── Notification.java
-├── repository/
+├── notification/
+│   ├── NotificationController.java
+│   ├── NotificationService.java
+│   ├── Notification.java
 │   └── NotificationRepository.java
 └── kafka/
     ├── InventoryEventConsumer.java

@@ -24,6 +24,7 @@ A microservices-based vending machine control system built with Spring Boot, Spr
 ## 📋 Prerequisites
 
 - Java 17 or higher
+- Spring Boot 3.5.6
 - Maven 3.8 or higher
 - MySQL 8.0 or higher
 - Apache Kafka 3.5 or higher (with Zookeeper)
