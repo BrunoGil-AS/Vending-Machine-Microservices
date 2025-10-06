@@ -43,8 +43,10 @@ public class InventoryService {
     }
 
     public Stock updateStock(Long productId, Stock stock) {
-        Product product = productRepository.findById(productId).orElseThrow(() -> new RuntimeException("Product not found"));
-        stock.setProduct(product);
-        return stockRepository.save(stock);
+        Stock existingStock = stockRepository.findByProductId(productId)
+                .orElseThrow(() -> new RuntimeException("Stock not found for product id: " + productId));
+        existingStock.setQuantity(stock.getQuantity());
+        existingStock.setMinThreshold(stock.getMinThreshold());
+        return stockRepository.save(existingStock);
     }
 }

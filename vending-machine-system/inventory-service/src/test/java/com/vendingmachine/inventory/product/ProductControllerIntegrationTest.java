@@ -13,6 +13,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.TestPropertySource;
 
 /**
  * Integration tests for the Product Controller endpoints.
@@ -35,7 +36,8 @@ import org.springframework.http.ResponseEntity;
  * @see com.vendingmachine.inventory.product.ProductController
  */
 @SpringBootTest(classes = InventoryServiceApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class ProductControllerIntegrationTest {
+ @TestPropertySource(properties = {"spring.cloud.config.enabled=false"})
+ public class ProductControllerIntegrationTest {
 
     @Autowired
     private TestRestTemplate restTemplate;

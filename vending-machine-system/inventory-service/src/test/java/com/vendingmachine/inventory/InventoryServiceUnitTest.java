@@ -73,7 +73,9 @@ public class InventoryServiceUnitTest {
     @Test
     void updateStock_updatesStockForProduct() {
         Product p = Product.builder().id(200L).name("Snack").price(1.0).description("Chips").build();
-        when(productRepository.findById(200L)).thenReturn(Optional.of(p));
+        Stock existingStock = Stock.builder().id(1L).product(p).quantity(10).minThreshold(2).build();
+
+        when(stockRepository.findByProductId(200L)).thenReturn(Optional.of(existingStock));
 
         Stock toSave = Stock.builder().quantity(77).minThreshold(5).build();
         when(stockRepository.save(any(Stock.class))).thenAnswer(invocation -> invocation.getArgument(0));
