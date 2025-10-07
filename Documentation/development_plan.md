@@ -85,13 +85,13 @@ Services:
 
 ---
 
-## Development Timeline
+## **Development Timeline**
 
-### Phase 1: Infrastructure Setup (Days 1-4)
+### **Phase 1: Infrastructure Setup (Days 1-4)**
 
-#### Day 1 - Environment Setup & Configuration
+#### **Day 1 - Environment Setup & Configuration**
 
-**Tasks:**
+_Tasks:_
 
 - Set up Maven multi-module project structure
 - Configure local development environment (Java 17, MySQL, Kafka)
@@ -100,34 +100,34 @@ Services:
 - Set up basic project dependencies and Spring Boot versions
 - Create common libraries for shared DTOs and utilities
 
-**Deliverables:**
+_Deliverables:_
 
 - Working development environment
 - Maven project structure
 - Local Kafka and MySQL running
 - Basic project skeleton
 
-#### Day 2 - Config Server & Eureka Setup
+#### **Day 2 - Config Server & Eureka Setup**
 
-**Tasks:**
+_Tasks:_
 
-- Implement Config Server with local `application.properties` files
+- Implement Config Server with local application.properties files
 - Configure separate property files for each service
 - Set up Eureka Server with basic configuration
 - Create service registration configurations
 - Test service discovery functionality
 - Configure logging patterns for all services
 
-**Deliverables:**
+_Deliverables:_
 
 - Working Config Server
 - Working Eureka Server
 - Service registration templates
 - Basic logging configuration
 
-#### Day 3 - API Gateway with JWT Authentication
+#### **Day 3 - API Gateway with JWT Authentication**
 
-**Tasks:**
+_Tasks:_
 
 - Create Spring Cloud Gateway with basic routing
 - Implement JWT authentication system:
@@ -139,16 +139,49 @@ Services:
 - Implement user context header propagation
 - Create admin login endpoint
 
-**Deliverables:**
+_Deliverables:_
 
 - Working API Gateway
 - JWT authentication system
 - User management database schema
 - Login functionality
 
-#### Day 4 - Gateway Integration & Testing
+### **Day 4 – API Gateway Security Integration & Role-Based Routing**
 
-**Tasks:**
+_Tasks:_
+
+- **Security Configuration**
+
+  - Implement `SecurityConfig` class for JWT validation.
+  - Configure JWT filter for all protected routes.
+  - Enforce role-based access control:
+    - `SUPER_ADMIN` for system and user management.
+    - `ADMIN` for operational endpoints (inventory, transaction monitoring, notifications).
+  - Integrate password hashing (BCrypt) for admin users.
+  - Validate JWT token signature, expiration, and user status.
+
+- **Routing Configuration**
+
+  - Route authenticated requests to respective microservices.
+  - Add user context headers (`X-User-Id`, `X-User-Role`, `X-Username`) for downstream services.
+  - Define conditional routing for role-based endpoints.
+  - Implement fallback strategies for unauthorized or expired token access.
+
+- **Integration Tasks**
+  - Update gateway routes in `application.yml` with protected admin routes.
+  - Ensure public routes bypass authentication.
+  - Test JWT authentication, role enforcement, and header propagation.
+
+_Deliverables:_
+
+- Fully secured API Gateway with JWT authentication.
+- Role-based endpoint protection configured.
+- Conditional routing to microservices based on authentication and authorization.
+- Integration tests validating access control, token validation, and user context propagation.
+
+#### **Day 5 - Gateway Integration & Testing**
+
+_Tasks:_
 
 - Complete gateway routing to downstream services
 - Implement service discovery integration with Eureka
@@ -157,41 +190,41 @@ Services:
 - Implement request/response logging
 - Create Postman collection for authentication testing
 
-**Deliverables:**
+_Deliverables:_
 
 - Complete gateway functionality
 - User management system
 - Authentication testing suite
 - Documentation for API usage
 
-### Phase 2: Core Business Services (Days 5-10)
+### **Phase 2: Core Business Services (Days 5-10)**
 
-#### Day 5 - Inventory Service Foundation [COMPLETED]
+#### **Day 6 - Inventory Service Foundation**
 
-**Tasks:**
+_Tasks:_
 
 - Create Inventory Service with Eureka registration
 - Design and implement core entities:
   - Product (id, name, price, description)
   - Stock (productId, quantity, minThreshold)
 - Implement basic REST endpoints:
-  - `GET /api/inventory/products` (public)
-  - `GET /api/inventory/availability/{productId}` (public)
-  - `POST /api/admin/inventory/products` (admin)
-  - `PUT /api/admin/inventory/stock/{productId}` (admin)
+  - GET /api/inventory/products (public)
+  - GET /api/inventory/availability/{productId} (public)
+  - POST /api/admin/inventory/products (admin)
+  - PUT /api/admin/inventory/stock/{productId} (admin)
 - Set up MySQL database connection and manual schema
 - Implement basic validation and error handling
 
-**Deliverables:**
+_Deliverables:_
 
 - Working Inventory Service
 - Product and stock management
 - Database schema and sample data
 - Basic API endpoints
 
-#### Day 6 - Inventory Service with Kafka Integration
+#### **Day 7 - Inventory Service with Kafka Integration**
 
-**Tasks:**
+_Tasks:_
 
 - Integrate Kafka producer for inventory events
 - Implement stock update event publishing
@@ -203,16 +236,16 @@ Services:
   - Low stock alerts
 - Add comprehensive logging for all operations
 
-**Deliverables:**
+_Deliverables:_
 
 - Kafka-integrated inventory service
 - Event-driven stock management
 - Low stock monitoring
 - Complete inventory functionality
 
-#### Day 7 - Payment Service Implementation
+#### **Day 8 - Payment Service Implementation**
 
-**Tasks:**
+_Tasks:_
 
 - Create Payment Service with core entities:
   - PaymentTransaction (id, amount, method, status)
@@ -222,20 +255,20 @@ Services:
   - Card payment simulation (success/failure rates)
   - Payment status tracking
 - Create payment endpoints:
-  - `POST /api/payment/process` (public)
-  - `GET /api/admin/payment/transactions` (admin)
+  - POST /api/payment/process (public)
+  - GET /api/admin/payment/transactions (admin)
 - Integrate Kafka producer for payment events
 
-**Deliverables:**
+_Deliverables:_
 
 - Working Payment Service
 - Simulated payment processing
 - Payment event publishing
 - Payment transaction history
 
-#### Day 8 - Transaction Service Foundation
+#### **Day 9 - Transaction Service Foundation**
 
-**Tasks:**
+_Tasks:_
 
 - Create Transaction Service with orchestration logic
 - Design transaction entities:
@@ -246,20 +279,20 @@ Services:
   - Payment processing coordination
   - Transaction status management
 - Create transaction endpoints:
-  - `POST /api/transaction/purchase` (public)
-  - `GET /api/admin/transaction/history` (admin)
+  - POST /api/transaction/purchase (public)
+  - GET /api/admin/transaction/history (admin)
 - Add basic error handling and rollback logic
 
-**Deliverables:**
+_Deliverables:_
 
 - Working Transaction Service
 - Purchase orchestration
 - Transaction management
 - Basic workflow implementation
 
-#### Day 9 - Transaction Service Kafka Integration
+#### **Day 10 - Transaction Service Kafka Integration**
 
-**Tasks:**
+_Tasks:_
 
 - Integrate Kafka consumers for payment and dispensing events
 - Implement transaction state management based on events
@@ -268,16 +301,16 @@ Services:
 - Implement simple compensation logic for failed transactions
 - Add transaction history and reporting features
 
-**Deliverables:**
+_Deliverables:_
 
 - Event-driven transaction processing
 - Transaction state management
 - Failure handling and compensation
 - Complete transaction workflow
 
-#### Day 10 - Dispensing Service Implementation
+#### **Day 11 - Dispensing Service Implementation**
 
-**Tasks:**
+_Tasks:_
 
 - Create Dispensing Service with hardware simulation
 - Design dispensing entities:
@@ -291,18 +324,18 @@ Services:
 - Implement Kafka producer for dispensing results
 - Add dispensing history and monitoring
 
-**Deliverables:**
+_Deliverables:_
 
 - Working Dispensing Service
 - Hardware simulation
 - Event-driven dispensing
 - Operation monitoring
 
-### Phase 3: System Integration & Enhancement (Days 11-14)
+### **Phase 3: System Integration & Enhancement (Days 11-14)**
 
-#### Day 11 - Notification Service & Event Integration
+#### **Day 12 - Notification Service & Event Integration**
 
-**Tasks:**
+_Tasks:_
 
 - Create Notification Service with Kafka integration
 - Implement notification entities:
@@ -316,16 +349,16 @@ Services:
 - Implement notification logging and storage
 - Create admin endpoints for notification management
 
-**Deliverables:**
+_Deliverables:_
 
 - Working Notification Service
 - Complete event consumption
 - Notification storage and retrieval
 - System-wide alert handling
 
-#### Day 12 - End-to-End Integration Testing
+#### **Day 13 - End-to-End Integration Testing**
 
-**Tasks:**
+_Tasks:_
 
 - Test complete purchase flow from inventory check to dispensing
 - Verify all Kafka event flows work correctly
@@ -335,16 +368,16 @@ Services:
 - Performance testing with concurrent requests
 - Fix integration issues and improve error handling
 
-**Deliverables:**
+_Deliverables:_
 
 - Fully integrated system
 - Working end-to-end flows
 - Validated error handling
 - Performance baseline
 
-#### Day 13 - System Monitoring & Observability
+#### **Day 14 - System Monitoring & Observability**
 
-**Tasks:**
+_Tasks:_
 
 - Add Spring Boot Actuator to all services
 - Implement health checks for each service
@@ -357,16 +390,16 @@ Services:
 - Implement correlation ID tracking across services
 - Add structured logging for better debugging
 
-**Deliverables:**
+_Deliverables:_
 
 - Comprehensive monitoring
 - Health check endpoints
 - Business metrics tracking
 - Improved observability
 
-#### Day 14 - Security & Data Validation
+#### **Day 15 - Security & Data Validation**
 
-**Tasks:**
+_Tasks:_
 
 - Enhance input validation across all services
 - Implement request rate limiting at gateway level
@@ -376,18 +409,18 @@ Services:
 - Add security headers and CORS configuration
 - Test security measures and fix vulnerabilities
 
-**Deliverables:**
+_Deliverables:_
 
 - Enhanced security implementation
 - Input validation and sanitization
 - Audit logging
 - Security testing results
 
-### Phase 4: Testing & Final Integration (Days 15-17)
+### **Phase 4: Testing & Final Integration (Days 15-17)**
 
-#### Day 15 - Comprehensive Testing Suite
+#### **Day 16 - Comprehensive Testing Suite**
 
-**Tasks:**
+_Tasks:_
 
 - Create unit tests for all service layers
 - Implement integration tests using local MySQL
@@ -399,16 +432,16 @@ Services:
   - Kafka broker issues
 - Document test scenarios and results
 
-**Deliverables:**
+_Deliverables:_
 
 - Complete test suite
 - Integration test coverage
 - API testing collection
 - Failure scenario documentation
 
-#### Day 16 - Performance Optimization & Documentation
+#### **Day 17 - Performance Optimization & Documentation**
 
-**Tasks:**
+_Tasks:_
 
 - Optimize database queries and connections
 - Tune Kafka producer/consumer configurations
@@ -419,16 +452,16 @@ Services:
 - Document Kafka topic schemas and event flows
 - Create troubleshooting guide
 
-**Deliverables:**
+_Deliverables:_
 
 - Optimized system performance
 - Complete documentation
 - Setup and deployment guides
 - Troubleshooting documentation
 
-#### Day 17 - Final Integration & Demo Preparation
+#### **Day 18 - Final Integration & Demo Preparation**
 
-**Tasks:**
+_Tasks:_
 
 - Final end-to-end testing of all scenarios
 - Create demo data and sample scenarios
@@ -438,7 +471,7 @@ Services:
 - Document lessons learned and future enhancements
 - Prepare handover documentation
 
-**Deliverables:**
+_Deliverables:_
 
 - Production-ready demo system
 - Demo materials and scripts
