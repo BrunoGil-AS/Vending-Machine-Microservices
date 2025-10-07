@@ -115,7 +115,7 @@ import org.springframework.test.context.TestPropertySource;
                 .quantity(5)
                 .minThreshold(1)
                 .build();
-        Stock savedStock = stockRepository.save(s);
+        s = stockRepository.save(s);
         
         saved.setStock(s);
         productRepository.save(saved);

@@ -131,12 +131,21 @@ public class ProductServiceTest {
                 .name("Existing Product")
                 .build();
 
+        Stock existingStock = Stock.builder()
+                .id(1L)
+                .product(existingProduct)
+                .quantity(10)
+                .minThreshold(5)
+                .build();
+
+        existingProduct.setStock(existingStock);
+
         Stock newStock = Stock.builder()
                 .quantity(15)
                 .minThreshold(5)
                 .build();
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+        when(stockRepository.findByProductId(productId)).thenReturn(Optional.of(existingStock));
         when(stockRepository.save(any(Stock.class))).thenAnswer(i -> i.getArguments()[0]);
 
         // Act
@@ -148,7 +157,7 @@ public class ProductServiceTest {
         assertEquals(5, result.getMinThreshold());
         assertEquals(existingProduct, result.getProduct());
 
-        verify(productRepository, times(1)).findById(productId);
+        verify(stockRepository, times(1)).findByProductId(productId);
         verify(stockRepository, times(1)).save(any(Stock.class));
     }
 
@@ -161,14 +170,14 @@ public class ProductServiceTest {
                 .minThreshold(5)
                 .build();
 
-        when(productRepository.findById(productId)).thenReturn(Optional.empty());
+        when(stockRepository.findByProductId(productId)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThrows(RuntimeException.class, () -> {
             inventoryService.updateStock(productId, newStock);
         });
 
-        verify(productRepository, times(1)).findById(productId);
+        verify(stockRepository, times(1)).findByProductId(productId);
         verify(stockRepository, never()).save(any(Stock.class));
     }
 }
