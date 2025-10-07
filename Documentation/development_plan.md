@@ -168,7 +168,7 @@ _Tasks:_
   - Implement fallback strategies for unauthorized or expired token access.
 
 - **Integration Tasks**
-  - Update gateway routes in `application.yml` with protected admin routes.
+  - Update gateway routes with protected admin routes.
   - Ensure public routes bypass authentication.
   - Test JWT authentication, role enforcement, and header propagation.
 
