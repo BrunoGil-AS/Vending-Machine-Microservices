@@ -47,7 +47,7 @@ public class AuthService {
                     }
                     
                     // Generate JWT token
-                    String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
+                    String token = jwtUtil.generateToken(user);
                     
                     log.info("User logged in successfully: {}", user.getUsername());
                     

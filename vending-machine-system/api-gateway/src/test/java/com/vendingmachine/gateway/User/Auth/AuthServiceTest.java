@@ -15,8 +15,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
-
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 
@@ -51,7 +49,7 @@ public class AuthServiceTest {
         LoginRequest loginRequest = new LoginRequest("admin", "admin123");
 
         when(adminUserRepository.findByUsernameAndActiveTrue("admin")).thenReturn(Mono.just(adminUser));
-        when(jwtUtil.generateToken(anyString(), anyString())).thenReturn("test-token");
+        when(jwtUtil.generateToken(any(AdminUser.class))).thenReturn("test-token");
         when(jwtUtil.getExpirationTime()).thenReturn(3600L);
 
         StepVerifier.create(authService.login(loginRequest))

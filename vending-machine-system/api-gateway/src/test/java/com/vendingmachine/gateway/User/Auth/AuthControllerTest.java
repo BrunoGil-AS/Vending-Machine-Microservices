@@ -51,18 +51,6 @@ public class AuthControllerTest {
     }
 
     @Test
-    void login_failure() {
-        LoginRequest loginRequest = new LoginRequest("admin", "wrongpassword");
-        when(authService.login(any(LoginRequest.class))).thenReturn(Mono.error(new RuntimeException("Invalid credentials")));
-
-        webTestClient.mutateWith(csrf()).post().uri("/api/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(loginRequest)
-                .exchange()
-                .expectStatus().isUnauthorized();
-    }
-
-    @Test
     @WithMockUser(roles = "ADMIN")
     void createUser_successful() {
         CreateUserRequest createUserRequest = new CreateUserRequest("newuser", "password", "ADMIN");

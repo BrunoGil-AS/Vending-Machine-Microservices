@@ -8,6 +8,8 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.vendingmachine.gateway.User.AdminUser;
+
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
@@ -26,12 +28,13 @@ public class JwtUtil {
     /**
      * Generate JWT token
      */
-    public String generateToken(String username, String role) {
+    public String generateToken(AdminUser user) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("role", role);
+        claims.put("role", user.getRole());
+        claims.put("userId", user.getId());
         return Jwts.builder()
                 .claims(claims)
-                .subject(username)
+                .subject(user.getUsername())
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + expiration * 1000))
                 .signWith(getSigningKey())
@@ -68,6 +71,13 @@ public class JwtUtil {
     }
 
     /**
+     * Get user ID from JWT token
+     */
+    public Long getUserIdFromToken(String token) {
+        return getClaimFromToken(token, claims -> claims.get("userId", Long.class));
+    }
+
+    /**
      * Get expiration date from JWT token
      */
     public Date getExpirationDateFromToken(String token) {
@@ -79,7 +89,7 @@ public class JwtUtil {
         return claimsResolver.apply(claims);
     }
 
-    private Claims getAllClaimsFromToken(String token) {
+    public Claims getAllClaimsFromToken(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
