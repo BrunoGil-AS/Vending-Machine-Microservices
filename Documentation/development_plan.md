@@ -222,7 +222,7 @@ _Deliverables:_
 - Database schema and sample data
 - Basic API endpoints
 
-#### **Day 7 - Inventory Service with Kafka Integration**
+#### **Day 7 - Inventory Service with Kafka Integration** ✓
 
 _Tasks:_
 
