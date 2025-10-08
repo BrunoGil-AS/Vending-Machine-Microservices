@@ -55,6 +55,13 @@ public class ProductController {
         logger.info("Stock updated successfully for product ID: {}", productId);
         return updatedStock;
     }
+    @DeleteMapping("/admin/inventory/products/{productId}")
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long productId) {
+        logger.info("Received request to delete product ID: {}", productId);
+        inventoryService.deleteProduct(productId);
+        logger.info("Product deleted successfully with ID: {}", productId);
+        return ResponseEntity.noContent().build();
+    }
 
 
 }

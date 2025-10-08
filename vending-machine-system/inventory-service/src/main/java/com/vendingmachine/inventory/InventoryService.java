@@ -62,6 +62,57 @@ public class InventoryService {
         productRepository.save(newProduct);
         stockRepository.save(stock);
         logger.info("Product added successfully with ID: {}, initial stock: {}", newProduct.getId(), product.getQuantity());
+
+        // Publish stock update event for initial stock
+        String status = "STOCK_INITIAL";
+        if (stock.getQuantity() <= 0) {
+            status = "OUT_OF_STOCK";
+            logger.warn("Product ID: {} added with out of stock", newProduct.getId());
+        } else if (stock.getQuantity() < stock.getMinThreshold()) {
+            status = "LOW_STOCK";
+            logger.warn("Product ID: {} added with low stock. Current: {}, Threshold: {}",
+                       newProduct.getId(), stock.getQuantity(), stock.getMinThreshold());
+        }
+
+        StockUpdateEvent stockEvent = new StockUpdateEvent(
+            UUID.randomUUID().toString(),
+            newProduct.getId(),
+            stock.getQuantity(),
+            status,
+            System.currentTimeMillis()
+        );
+        kafkaProducerService.send("stock-update-events", stockEvent);
+        logger.info("Published initial stock update event: {}", stockEvent);
+
+        // Publish low stock alert if applicable
+        if (stock.getQuantity() < stock.getMinThreshold() && stock.getQuantity() > 0) {
+            String alertType = "LOW_STOCK";
+            LowStockAlertEvent alertEvent = new LowStockAlertEvent(
+                UUID.randomUUID().toString(),
+                newProduct.getId(),
+                newProduct.getName(),
+                stock.getQuantity(),
+                stock.getMinThreshold(),
+                alertType,
+                System.currentTimeMillis()
+            );
+            kafkaProducerService.send("low-stock-alerts", alertEvent);
+            logger.info("Published low stock alert event for new product: {}", alertEvent);
+        } else if (stock.getQuantity() <= 0) {
+            String alertType = "OUT_OF_STOCK";
+            LowStockAlertEvent alertEvent = new LowStockAlertEvent(
+                UUID.randomUUID().toString(),
+                newProduct.getId(),
+                newProduct.getName(),
+                stock.getQuantity(),
+                stock.getMinThreshold(),
+                alertType,
+                System.currentTimeMillis()
+            );
+            kafkaProducerService.send("low-stock-alerts", alertEvent);
+            logger.warn("Published out of stock alert event for new product: {}", alertEvent);
+        }
+
         return newProduct;
     }
 
@@ -134,10 +185,81 @@ public class InventoryService {
                    productId, stock.getQuantity(), stock.getMinThreshold());
         Stock existingStock = stockRepository.findByProductId(productId)
                 .orElseThrow(() -> new RuntimeException("Stock not found for product id: " + productId));
+        int previousQuantity = existingStock.getQuantity();
         existingStock.setQuantity(stock.getQuantity());
         existingStock.setMinThreshold(stock.getMinThreshold());
         Stock updatedStock = stockRepository.save(existingStock);
-        logger.info("Stock details updated for product ID: {}", productId);
+        logger.info("Stock details updated for product ID: {}. Previous quantity: {}, New quantity: {}, Min threshold: {}",
+                   productId, previousQuantity, updatedStock.getQuantity(), updatedStock.getMinThreshold());
+
+        // Publish stock update event
+        String status = "STOCK_UPDATED";
+        if (updatedStock.getQuantity() <= 0) {
+            status = "OUT_OF_STOCK";
+            logger.warn("Product ID: {} is now out of stock", productId);
+        } else if (updatedStock.getQuantity() < updatedStock.getMinThreshold()) {
+            status = "LOW_STOCK";
+            logger.warn("Product ID: {} is below minimum threshold. Current: {}, Threshold: {}",
+                       productId, updatedStock.getQuantity(), updatedStock.getMinThreshold());
+        }
+
+        StockUpdateEvent stockEvent = new StockUpdateEvent(
+            UUID.randomUUID().toString(),
+            productId,
+            updatedStock.getQuantity(),
+            status,
+            System.currentTimeMillis()
+        );
+        kafkaProducerService.send("stock-update-events", stockEvent);
+        logger.info("Published stock update event: {}", stockEvent);
+
+        // Publish low stock alert if applicable
+        if (updatedStock.getQuantity() < updatedStock.getMinThreshold() && updatedStock.getQuantity() > 0) {
+            String alertType = "LOW_STOCK";
+            LowStockAlertEvent alertEvent = new LowStockAlertEvent(
+                UUID.randomUUID().toString(),
+                productId,
+                existingStock.getProduct().getName(),
+                updatedStock.getQuantity(),
+                updatedStock.getMinThreshold(),
+                alertType,
+                System.currentTimeMillis()
+            );
+            kafkaProducerService.send("low-stock-alerts", alertEvent);
+            logger.info("Published low stock alert event: {}", alertEvent);
+        } else if (updatedStock.getQuantity() <= 0) {
+            String alertType = "OUT_OF_STOCK";
+            LowStockAlertEvent alertEvent = new LowStockAlertEvent(
+                UUID.randomUUID().toString(),
+                productId,
+                existingStock.getProduct().getName(),
+                updatedStock.getQuantity(),
+                updatedStock.getMinThreshold(),
+                alertType,
+                System.currentTimeMillis()
+            );
+            kafkaProducerService.send("low-stock-alerts", alertEvent);
+            logger.warn("Published out of stock alert event: {}", alertEvent);
+        }
+
         return updatedStock;
+    }
+
+    public void deleteProduct(Long productId) {
+        logger.info("Deleting product with ID: {}", productId);
+        if (!productRepository.existsById(productId)) {
+            logger.error("Product with ID: {} not found for deletion", productId);
+            throw new RuntimeException("Product not found with id: " + productId);
+        }
+        Optional<Stock> stockOpt = stockRepository.findByProductId(productId);
+        Stock stock = stockOpt.orElse(null);
+        if (stock != null) {
+            stockRepository.delete(stock);
+            logger.debug("Stock for product ID: {} deleted", productId);
+        } else {
+            logger.warn("No stock found for product ID: {} during deletion", productId);
+        }
+        productRepository.deleteById(productId);
+        logger.info("Product with ID: {} deleted successfully", productId);
     }
 }

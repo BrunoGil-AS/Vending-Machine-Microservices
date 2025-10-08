@@ -28,7 +28,7 @@ public class KafkaProducerService {
                 if (ex != null) {
                     logger.error("Failed to send message to topic {}: {}", topic, ex.getMessage(), ex);
                 } else {
-                    logger.debug("Message sent successfully to topic {} partition {} offset {}",
+                    logger.debug("\nMessage sent successfully to topic {}\n partition {}\n offset {}\n\n",
                                topic, result.getRecordMetadata().partition(), result.getRecordMetadata().offset());
                 }
             });

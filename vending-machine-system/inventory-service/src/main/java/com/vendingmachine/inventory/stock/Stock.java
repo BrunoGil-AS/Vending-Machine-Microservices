@@ -28,7 +28,4 @@ public class Stock {
 
     private Integer quantity;
     private Integer minThreshold;
-
-    @Version
-    private Long version;
 }
