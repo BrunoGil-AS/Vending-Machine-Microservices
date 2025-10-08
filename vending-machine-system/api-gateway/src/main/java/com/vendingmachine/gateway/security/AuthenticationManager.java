@@ -32,8 +32,6 @@ public class AuthenticationManager implements ReactiveAuthenticationManager {
         String authToken = authentication.getCredentials().toString();
         
         try {
-            log.info(String.format("\nAttempting to authenticate token: %s", authToken));
-            log.info(String.format("\nUsing secret key: %s", jwtSecret));
 
             // decode the secret key from Base64 first
             byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
@@ -46,7 +44,7 @@ public class AuthenticationManager implements ReactiveAuthenticationManager {
                 .getPayload();
             
             String role = claims.get("role", String.class);
-            log.info(String.format("\nToken valid. User: %s, Role: %s", claims.getSubject(), role));
+            log.info(String.format("\nToken valid. User: %s, Role: %s\n", claims.getSubject(), role));
             
             List<SimpleGrantedAuthority> authorities = Collections.singletonList(
                 new SimpleGrantedAuthority("ROLE_" + role)
@@ -57,11 +55,11 @@ public class AuthenticationManager implements ReactiveAuthenticationManager {
                 null,
                 authorities
             );
-            log.info(String.format("\nCreated authentication for user: %s", claims.getSubject()));
+            log.info(String.format("\nCreated authentication for user:  %s\n", claims.getSubject()));
             
             return Mono.just(auth);
         } catch (Exception e) {
-            log.warning(String.format("\nAuthentication failed: %s", e.getMessage()));
+            log.warning(String.format("\nAuthentication failed: %s\n", e.getMessage()));
             e.printStackTrace();
             return Mono.empty();
         }

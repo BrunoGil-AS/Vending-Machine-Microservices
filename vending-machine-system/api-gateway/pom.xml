@@ -26,7 +26,7 @@
             <scope>runtime</scope>
             <optional>true</optional>
         </dependency>
-        
+
         <!-- Common Library -->
         <dependency>
             <groupId>com.vendingmachine</groupId>
