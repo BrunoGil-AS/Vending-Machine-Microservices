@@ -14,7 +14,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
-import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import com.vendingmachine.gateway.security.AuthenticationManager;
 
 import java.util.Arrays;
@@ -48,7 +47,7 @@ public class SecurityConfig {
                         .pathMatchers("/actuator/health").permitAll()
                         .pathMatchers("/api/admin/inventory/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .pathMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
-                        .pathMatchers("/actuator/**").authenticated()
+                        .pathMatchers("/actuator/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         .anyExchange().authenticated()
                 )
                 .build();
