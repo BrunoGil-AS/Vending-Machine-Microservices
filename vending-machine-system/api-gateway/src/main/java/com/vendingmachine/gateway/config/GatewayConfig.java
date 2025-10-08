@@ -14,6 +14,11 @@ public class GatewayConfig {
     @Bean
     public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
         return builder.routes()
+                // Ignore favicon requests
+                .route("favicon", r -> r
+                        .path("/favicon.ico")
+                        .filters(f -> f.rewritePath("/favicon.ico", "/"))
+                        .uri("no://op"))
                 // Inventory Service Routes
                 .route("inventory-service-public", r -> r
                         .path("/api/inventory/**")

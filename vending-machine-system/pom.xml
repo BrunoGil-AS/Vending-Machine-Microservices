@@ -134,6 +134,14 @@
                 <version>${mapstruct.version}</version>
             </dependency>
 
+            <!-- Spring Boot DevTools -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-devtools</artifactId>
+                <scope>runtime</scope>
+                <optional>true</optional>
+            </dependency>
+
             <!-- Common Library -->
             <dependency>
                 <groupId>com.vendingmachine</groupId>
@@ -158,6 +166,8 @@
                                 <artifactId>lombok</artifactId>
                             </exclude>
                         </excludes>
+                        <fork>true</fork>
+                        <addResources>true</addResources>
                     </configuration>
                 </plugin>
 
