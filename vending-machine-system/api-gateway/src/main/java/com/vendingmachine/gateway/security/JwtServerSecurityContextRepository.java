@@ -1,6 +1,8 @@
 package com.vendingmachine.gateway.security;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.java.Log;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -13,9 +15,10 @@ import reactor.core.publisher.Mono;
 
 @Component
 @RequiredArgsConstructor
+@Log
 public class JwtServerSecurityContextRepository implements ServerSecurityContextRepository {
     
-    private final org.springframework.security.authentication.ReactiveAuthenticationManager authenticationManager;
+    private final AuthenticationManager authenticationManager;
 
     @Override
     public Mono<Void> save(ServerWebExchange exchange, SecurityContext context) {
@@ -28,20 +31,20 @@ public class JwtServerSecurityContextRepository implements ServerSecurityContext
             .getHeaders()
             .getFirst(HttpHeaders.AUTHORIZATION);
 
-        System.out.println("Received request with auth header: " + (authHeader != null ? authHeader.substring(0, Math.min(20, authHeader.length())) + "..." : "null"));
+        log.info(String.format("\nAuthorization header: %s", authHeader));
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String authToken = authHeader.substring(7);
-            System.out.println("Extracted token: " + authToken.substring(0, Math.min(10, authToken.length())) + "...");
+            log.info("\nExtracted token: " + authToken);
             
             Authentication auth = new UsernamePasswordAuthenticationToken(authToken, authToken);
             return this.authenticationManager.authenticate(auth)
-                .doOnNext(authentication -> System.out.println("Authentication successful with authorities: " + authentication.getAuthorities()))
-                .doOnError(error -> System.out.println("Authentication failed: " + error.getMessage()))
+                .doOnNext(authentication -> log.info("\nAuthentication successful with authorities: " + authentication.getAuthorities()))
+                .doOnError(error -> log.warning("\nAuthentication failed: " + error.getMessage()))
                 .map(SecurityContextImpl::new);
         }
         
-        System.out.println("No valid authorization header found");
+        log.info("\nNo valid Authorization header found");
         return Mono.empty();
     }
 }

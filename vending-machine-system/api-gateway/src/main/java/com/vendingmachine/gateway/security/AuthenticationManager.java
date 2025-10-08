@@ -3,21 +3,26 @@ package com.vendingmachine.gateway.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.io.Decoders;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.java.Log;
+
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
-import java.nio.charset.StandardCharsets;
+import javax.crypto.SecretKey;
 import java.util.Collections;
 import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class AuthenticationManager implements org.springframework.security.authentication.ReactiveAuthenticationManager {
+@Log
+public class AuthenticationManager implements ReactiveAuthenticationManager {
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -27,17 +32,21 @@ public class AuthenticationManager implements org.springframework.security.authe
         String authToken = authentication.getCredentials().toString();
         
         try {
-            System.out.println("Attempting to authenticate token: " + authToken.substring(0, Math.min(10, authToken.length())) + "...");
-            System.out.println("Using secret key: " + jwtSecret.substring(0, Math.min(10, jwtSecret.length())) + "...");
-            
+            log.info(String.format("\nAttempting to authenticate token: %s", authToken));
+            log.info(String.format("\nUsing secret key: %s", jwtSecret));
+
+            // decode the secret key from Base64 first
+            byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+            SecretKey key = Keys.hmacShaKeyFor(keyBytes);
+
             Claims claims = Jwts.parser()
-                .verifyWith(Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8)))
+                .verifyWith(key)
                 .build()
                 .parseSignedClaims(authToken)
                 .getPayload();
             
             String role = claims.get("role", String.class);
-            System.out.println("Found role in token: " + role);
+            log.info(String.format("\nToken valid. User: %s, Role: %s", claims.getSubject(), role));
             
             List<SimpleGrantedAuthority> authorities = Collections.singletonList(
                 new SimpleGrantedAuthority("ROLE_" + role)
@@ -48,11 +57,11 @@ public class AuthenticationManager implements org.springframework.security.authe
                 null,
                 authorities
             );
-            System.out.println("Created authentication with authorities: " + auth.getAuthorities());
+            log.info(String.format("\nCreated authentication for user: %s", claims.getSubject()));
             
             return Mono.just(auth);
         } catch (Exception e) {
-            System.out.println("Authentication failed: " + e.getMessage());
+            log.warning(String.format("\nAuthentication failed: %s", e.getMessage()));
             e.printStackTrace();
             return Mono.empty();
         }

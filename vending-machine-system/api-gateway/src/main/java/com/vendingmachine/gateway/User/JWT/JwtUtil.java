@@ -5,6 +5,8 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.java.Log;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +19,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 @Component
+@Log
 public class JwtUtil {
 
     @Value("${jwt.secret}")
@@ -30,6 +33,8 @@ public class JwtUtil {
      */
     public String generateToken(AdminUser user) {
         Map<String, Object> claims = new HashMap<>();
+        log.info(String.format("\nGenerating token for user: %s\n using the secret key: %s", user.getUsername(), secret));
+
         claims.put("role", user.getRole());
         claims.put("userId", user.getId());
         return Jwts.builder()

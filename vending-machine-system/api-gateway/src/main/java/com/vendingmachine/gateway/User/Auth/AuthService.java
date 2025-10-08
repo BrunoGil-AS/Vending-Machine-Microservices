@@ -8,7 +8,7 @@ import com.vendingmachine.gateway.User.Login.DTO.*;
 import com.vendingmachine.gateway.User.DTO.*;
 import com.vendingmachine.gateway.User.JWT.*;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.java.Log;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -21,7 +21,7 @@ import java.time.format.DateTimeFormatter;
  */
 @Service
 @RequiredArgsConstructor
-@Slf4j
+@Log
 public class AuthService {
     
     private final AdminUserRepository userRepository;
@@ -32,7 +32,7 @@ public class AuthService {
      * Authenticate user and generate JWT token
      */
     public Mono<LoginResponse> login(LoginRequest request) {
-        log.info("Login attempt for user: {}", request.getUsername());
+        log.info(String.format("\nLogin attempt for user: %s \n", request.getUsername()));
         
         return userRepository.findByUsernameAndActiveTrue(request.getUsername())
                 .switchIfEmpty(Mono.error(new RuntimeException("Invalid username or password")))
@@ -42,15 +42,15 @@ public class AuthService {
                             .verify(request.getPassword().toCharArray(), user.getPasswordHash());
                     
                     if (!result.verified) {
-                        log.warn("Failed login attempt for user: {}", request.getUsername());
+                        log.warning(String.format("\nFailed login attempt for user: %s \n", request.getUsername()));
                         return Mono.error(new RuntimeException("Invalid username or password"));
                     }
                     
                     // Generate JWT token
                     String token = jwtUtil.generateToken(user);
-                    
-                    log.info("User logged in successfully: {}", user.getUsername());
-                    
+
+                    log.info(String.format("\nUser logged in successfully:\n %s\n", user.getUsername()));
+                    log.info(String.format("\nGenerated JWT token for user:\n %s\n", user.getUsername()));
                     return Mono.just(LoginResponse.builder()
                             .token(token)
                             .username(user.getUsername())
@@ -64,8 +64,8 @@ public class AuthService {
      * Create new admin user
      */
     public Mono<UserResponse> createUser(CreateUserRequest request) {
-        log.info("Creating new user: {}", request.getUsername());
-        
+        log.info(String.format("\nCreating new user: %s \n", request.getUsername()));
+
         return userRepository.existsByUsername(request.getUsername())
                 .flatMap(exists -> {
                     if (exists) {
@@ -93,7 +93,7 @@ public class AuthService {
                             .build();
                     
                     return userRepository.save(user)
-                            .doOnSuccess(u -> log.info("User created successfully: {}", u.getUsername()))
+                            .doOnSuccess(u -> log.info(String.format("\nUser created successfully: %s \n", u.getUsername())))
                             .map(this::mapToUserResponse);
                 });
     }
@@ -102,7 +102,7 @@ public class AuthService {
      * Update existing user
      */
     public Mono<UserResponse> updateUser(Long userId, UpdateUserRequest request) {
-        log.info("Updating user with ID: {}", userId);
+        log.info(String.format("\nUpdating user with ID: \n %d \n", userId));
         
         return userRepository.findById(userId)
                 .switchIfEmpty(Mono.error(new RuntimeException("User not found")))
@@ -132,7 +132,7 @@ public class AuthService {
                     user.setUpdatedAt(LocalDateTime.now());
                     
                     return userRepository.save(user)
-                            .doOnSuccess(u -> log.info("User updated successfully: {}", u.getUsername()))
+                            .doOnSuccess(u -> log.info(String.format("\nUser updated successfully: %s \n", u.getUsername())))
                             .map(this::mapToUserResponse);
                 });
     }
@@ -141,12 +141,12 @@ public class AuthService {
      * Delete user
      */
     public Mono<Void> deleteUser(Long userId) {
-        log.info("Deleting user with ID: {}", userId);
+        log.info(String.format("\nDeleting user with ID: %d", userId));
         
         return userRepository.findById(userId)
                 .switchIfEmpty(Mono.error(new RuntimeException("User not found")))
                 .flatMap(user -> userRepository.delete(user)
-                        .doOnSuccess(v -> log.info("User deleted successfully: {}", user.getUsername())));
+                        .doOnSuccess(v -> log.info(String.format("\nUser deleted successfully: %s \n", user.getUsername()))));
     }
     
     /**

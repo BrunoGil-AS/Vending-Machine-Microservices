@@ -39,7 +39,7 @@ public class SecurityConfig {
                 .authenticationManager(authenticationManager)
                 .securityContextRepository(securityContextRepository)
                 .authorizeExchange(auth -> auth
-                        .pathMatchers("/favicon.ico").permitAll()
+                        .pathMatchers("/favicon.ico/**").permitAll()
                         .pathMatchers("/api/auth/login").permitAll()
                         .pathMatchers("/api/inventory/products").permitAll()
                         .pathMatchers("/api/transactions/purchase").permitAll()
