@@ -228,13 +228,9 @@ curl -X GET http://localhost:8080/api/admin/inventory/products \
 - `dispensing-events` - Item dispensing results
 - `notification-events` - System alerts and notifications
 
-
-
 ## 📚 Documentation
 
 - [Development Plan](docs/development-plan.md)
-
-
 
 ## 👥 Authors
 
