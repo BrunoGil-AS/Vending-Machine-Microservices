@@ -1,66 +1,66 @@
-# Configuración de Seguridad - Vending Machine Microservices
+# Security Configuration - Vending Machine Microservices
 
-## Resumen de la Configuración
+## Configuration Summary
 
-Se ha implementado una configuración de seguridad que garantiza que los servicios solo sean accesibles desde el API Gateway y servicios internos autorizados, bloqueando el acceso directo desde clientes externos.
+A security configuration has been implemented that ensures services are only accessible from the API Gateway and authorized internal services, blocking direct access from external clients.
 
-## Arquitectura de Seguridad
+## Security Architecture
 
-### 1. API Gateway (Puerto 8080)
+### 1. API Gateway (Port 8080)
 
-- **Framework**: Spring Cloud Gateway con WebFlux Security
-- **Autenticación**: JWT-based con roles (SUPER_ADMIN, ADMIN)
-- **Endpoints públicos**: Login, productos de inventario, transacciones de compra
-- **Endpoints protegidos**: Administración (requiere JWT)
+- **Framework**: Spring Cloud Gateway with WebFlux Security
+- **Authentication**: JWT-based with roles (SUPER_ADMIN, ADMIN)
+- **Public Endpoints**: Login, inventory products, purchase transactions
+- **Protected Endpoints**: Administration (requires JWT)
 
-### 2. Inventory Service (Puerto 8081)
-
-- **Framework**: Spring Security (MVC)
-- **Acceso permitido**: Solo desde localhost (127.0.0.1, 0:0:0:0:0:0:0:1, localhost)
-- **Acceso denegado**: Desde cualquier IP externa
-- **Endpoints**:
-  - `GET /api/inventory/products` - Lista productos
-  - `GET /api/inventory/availability/{productId}` - Verifica disponibilidad
-  - `POST /api/admin/inventory/products` - Agregar producto (requiere JWT via Gateway)
-  - `PUT /api/admin/inventory/stock/{productId}` - Actualizar stock (requiere JWT via Gateway)
-
-### 3. Payment Service (Puerto 8082)
+### 2. Inventory Service (Port 8081)
 
 - **Framework**: Spring Security (MVC)
-- **Acceso permitido**: Solo desde localhost (127.0.0.1, 0:0:0:0:0:0:0:1, localhost)
-- **Acceso denegado**: Desde cualquier IP externa
+- **Allowed Access**: Only from localhost (127.0.0.1, 0:0:0:0:0:0:0:1, localhost)
+- **Denied Access**: From any external IP
 - **Endpoints**:
-  - `POST /api/payment/process` - Procesar pago
-  - `GET /api/admin/payment/transactions` - Ver transacciones (requiere JWT via Gateway)
+  - `GET /api/inventory/products` - List products
+  - `GET /api/inventory/availability/{productId}` - Check availability
+  - `POST /api/admin/inventory/products` - Add product (requires JWT via Gateway)
+  - `PUT /api/admin/inventory/stock/{productId}` - Update stock (requires JWT via Gateway)
 
-### 4. Servicios Internos (Transaction, Dispensing, Notification)
+### 3. Payment Service (Port 8082)
 
-- No tienen endpoints públicos expuestos
-- Se comunican vía Kafka events y llamadas HTTP directas entre servicios
-- No requieren configuración de seguridad adicional
+- **Framework**: Spring Security (MVC)
+- **Allowed Access**: Only from localhost (127.0.0.1, 0:0:0:0:0:0:0:1, localhost)
+- **Denied Access**: From any external IP
+- **Endpoints**:
+  - `POST /api/payment/process` - Process payment
+  - `GET /api/admin/payment/transactions` - View transactions (requires JWT via Gateway)
 
-## Flujo de Seguridad Actualizado
+### 4. Internal Services (Transaction, Dispensing, Notification)
+
+- They do not have exposed public endpoints
+- They communicate via Kafka events and direct HTTP calls between services
+- They do not require additional security configuration
+
+## Updated Security Flow
 
 ```mermaid
 graph TD
-    A[Cliente Externo] --> B[API Gateway]
-    B --> C{JWT Válido?}
-    C -->|Sí| D[Agregar Header X-Internal-Service]
-    D --> E[Enrutar a Servicio]
-    E --> F[Servicio valida header]
-    F -->|Válido| G[Permitir Acceso]
+    A[External Client] --> B[API Gateway]
+    B --> C{Valid JWT?}
+    C -->|Yes| D[Add X-Internal-Service Header]
+    D --> E[Route to Service]
+    E --> F[Service validates header]
+    F -->|Valid| G[Allow Access]
 
-    H[Cliente Externo] --> I[Inventory Service :8081]
-    I --> J{Tiene X-Internal-Service header?}
-    J -->|Sí| K[Permitir Acceso]
-    J -->|No| L{Es localhost?}
-    L -->|Sí| M[Permitir Acceso - Desarrollo]
+    H[External Client] --> I[Inventory Service :8081]
+    I --> J{Has X-Internal-Service header?}
+    J -->|Yes| K[Allow Access]
+    J -->|No| L{Is localhost?}
+    L -->|Yes| M[Allow Access - Development]
     L -->|No| N[403 Forbidden]
 ```
 
-## Configuración Técnica
+## Technical Configuration
 
-### SecurityConfig en Servicios
+### SecurityConfig in Services
 
 ```java
 @Configuration
@@ -99,7 +99,7 @@ public class SecurityConfig {
 }
 ```
 
-### InternalServiceFilter en API Gateway
+### InternalServiceFilter in API Gateway
 
 ```java
 @Component
@@ -144,83 +144,83 @@ public CorsConfigurationSource corsConfigurationSource() {
 }
 ```
 
-## Testing de Seguridad
+## Security Testing
 
-### 1. Acceso Autorizado (desde Gateway con header)
+### 1. Authorized Access (from Gateway with header)
 
 ```bash
-# Solicitud desde API Gateway (incluye header X-Internal-Service)
+# Request from API Gateway (includes X-Internal-Service header)
 curl -X GET http://localhost:8080/api/inventory/products
-# Gateway agrega: X-Internal-Service: api-gateway
-# Respuesta: 200 OK con lista de productos
+# Gateway adds: X-Internal-Service: api-gateway
+# Response: 200 OK with product list
 
 curl -X GET http://localhost:8080/api/admin/payment/transactions \
   -H "Authorization: Bearer <jwt-token>"
-# Respuesta: 200 OK con transacciones
+# Response: 200 OK with transactions
 ```
 
-### 2. Acceso Autorizado (localhost para desarrollo)
+### 2. Authorized Access (localhost for development)
 
 ```bash
-# Acceso directo desde localhost (para testing/development)
+# Direct access from localhost (for testing/development)
 curl -X GET http://localhost:8081/api/inventory/products
-# Respuesta: 200 OK (permitido por ser localhost)
+# Response: 200 OK (allowed because localhost)
 
 curl -X GET http://localhost:8082/actuator/health
-# Respuesta: 200 OK (health checks siempre permitidos)
+# Response: 200 OK (health checks always allowed)
 ```
 
-### 3. Acceso No Autorizado (desde IP externa)
+### 3. Unauthorized Access (from external IP)
 
 ```bash
-# Desde IP externa sin header (cliente malicioso)
+# From external IP without header (malicious client)
 curl -X GET http://192.168.1.100:8081/api/inventory/products
-# Respuesta: 403 Forbidden
-# Body: Página de error de acceso denegado
+# Response: 403 Forbidden
+# Body: Access denied error page
 
 curl -X POST http://192.168.1.100:8082/api/payment/process \
   -H "Content-Type: application/json" \
   -d '{"amount": 100.0, "method": "CARD"}'
-# Respuesta: 403 Forbidden
+# Response: 403 Forbidden
 ```
 
-## Beneficios de Esta Configuración
+## Benefits of This Configuration
 
-### Seguridad
+### Security
 
-- **Prevención de acceso directo**: Los servicios no pueden ser accedidos directamente desde internet
-- **Control centralizado**: Todo el tráfico debe pasar por el API Gateway
-- **Autenticación consistente**: JWT tokens validados una sola vez en el Gateway
+- **Prevention of direct access**: Services cannot be accessed directly from the internet
+- **Centralized control**: All traffic must pass through the API Gateway
+- **Consistent authentication**: JWT tokens validated once at the Gateway
 
-### Arquitectura
+### Architecture
 
-- **Microservicios protegidos**: Cada servicio mantiene su propio control de acceso
-- **Comunicación interna segura**: Servicios pueden llamarse entre sí sin restricciones
-- **Monitoreo simplificado**: Un solo punto de entrada para logs y métricas
+- **Protected microservices**: Each service maintains its own access control
+- **Secure internal communication**: Services can call each other without restrictions
+- **Simplified monitoring**: Single entry point for logs and metrics
 
-### Mantenibilidad
+### Maintainability
 
-- **Configuración clara**: Reglas de seguridad explícitas y documentadas
-- **Fácil de extender**: Nuevo servicios pueden seguir el mismo patrón
-- **Testing sencillo**: Comportamiento predecible para pruebas de seguridad
+- **Clear configuration**: Explicit and documented security rules
+- **Easy to extend**: New services can follow the same pattern
+- **Simple testing**: Predictable behavior for security tests
 
-## Consideraciones Adicionales
+## Additional Considerations
 
-### Producción
+### Production
 
-- Considerar usar un reverse proxy (nginx) para filtrado adicional de IPs
-- Implementar rate limiting en el API Gateway
-- Configurar HTTPS/TLS para toda la comunicación
-- Usar secrets management para JWT keys
+- Consider using a reverse proxy (nginx) for additional IP filtering
+- Implement rate limiting in the API Gateway
+- Configure HTTPS/TLS for all communication
+- Use secrets management for JWT keys
 
-### Monitoreo
+### Monitoring
 
-- Logs de acceso denegado para detectar intentos de intrusión
-- Métricas de latencia por servicio
-- Alertas cuando se detecten patrones de acceso sospechoso
+- Logs of denied access to detect intrusion attempts
+- Latency metrics per service
+- Alerts when suspicious access patterns are detected
 
-### Escalabilidad
+### Scalability
 
-- La configuración actual funciona bien para deployments en contenedores
-- Para Kubernetes, considerar NetworkPolicies adicionales
-- Service mesh (Istio) puede proporcionar seguridad adicional a nivel de red
+- The current configuration works well for container deployments
+- For Kubernetes, consider additional NetworkPolicies
+- Service mesh (Istio) can provide additional network-level security
