@@ -20,6 +20,9 @@ public class TransactionDTO {
     // No customerId - anonymous transactions
     private List<TransactionItemDTO> items;
     private BigDecimal totalAmount;
+    private String paymentMethod;
+    private BigDecimal paidAmount;
+    private BigDecimal changeAmount;
     private TransactionStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -30,6 +30,15 @@ public class Transaction {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 
+    @Column(nullable = false)
+    private String paymentMethod;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal paidAmount;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal changeAmount;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TransactionStatus status;

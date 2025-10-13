@@ -9,6 +9,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -31,8 +32,9 @@ public class PaymentService {
     private final Random random = new Random();
 
     @Transactional
-    public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent) {
-        log.info("Processing payment for transaction: {} with amount {}", transactionEvent.getTransactionId(), transactionEvent.getTotalAmount());
+    public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent, PaymentRequest paymentRequest) {
+        log.info("Processing payment for transaction: {} with amount {} and method {}",
+                transactionEvent.getTransactionId(), transactionEvent.getTotalAmount(), paymentRequest.getPaymentMethod());
 
         // Check if payment already exists for this transaction
         Optional<PaymentTransaction> existingPayment = transactionRepository.findByTransactionId(transactionEvent.getTransactionId());
@@ -44,12 +46,12 @@ public class PaymentService {
         PaymentTransaction transaction = new PaymentTransaction();
         transaction.setTransactionId(transactionEvent.getTransactionId());
         transaction.setAmount(transactionEvent.getTotalAmount());
-        transaction.setMethod(PaymentMethod.CREDIT_CARD); // Default to credit card for vending machines
+        transaction.setMethod(paymentRequest.getPaymentMethod());
         transaction.setStatus("PENDING");
 
         transaction = transactionRepository.save(transaction);
 
-        boolean success = simulatePayment(PaymentMethod.CREDIT_CARD);
+        boolean success = simulatePayment(paymentRequest);
 
         if (success) {
             transaction.setStatus("SUCCESS");
@@ -67,12 +69,26 @@ public class PaymentService {
         return transaction;
     }
 
-    private boolean simulatePayment(PaymentMethod method) {
+    @Transactional
+    public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent) {
+        // Backward compatibility method - defaults to credit card
+        PaymentRequest defaultRequest = new PaymentRequest();
+        defaultRequest.setPaymentMethod(PaymentMethod.CREDIT_CARD);
+        defaultRequest.setAmount(BigDecimal.valueOf(transactionEvent.getTotalAmount()));
+        return processPaymentForTransaction(transactionEvent, defaultRequest);
+    }
+
+    private boolean simulatePayment(PaymentRequest paymentRequest) {
+        PaymentMethod method = paymentRequest.getPaymentMethod();
+
         if (method == PaymentMethod.CASH) {
-            // Cash is always successful for simulation
-            return true;
+            // Cash payments - validate that paid amount covers the transaction amount
+            BigDecimal paidAmount = paymentRequest.getPaidAmount();
+            BigDecimal transactionAmount = paymentRequest.getAmount();
+            return paidAmount != null && paidAmount.compareTo(transactionAmount) >= 0;
         } else {
             // Card payments have configurable success rate
+            // In a real system, this would validate card details
             return random.nextDouble() < successRate;
         }
     }

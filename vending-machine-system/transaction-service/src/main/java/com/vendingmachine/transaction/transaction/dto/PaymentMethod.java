@@ -1,4 +1,4 @@
-package com.vendingmachine.payment.payment;
+package com.vendingmachine.transaction.transaction.dto;
 
 public enum PaymentMethod {
     CREDIT_CARD,

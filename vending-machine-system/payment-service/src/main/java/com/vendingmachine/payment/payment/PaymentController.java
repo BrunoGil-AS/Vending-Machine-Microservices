@@ -22,11 +22,11 @@ public class PaymentController {
         // For backward compatibility, create a mock TransactionEvent
         TransactionEvent mockEvent = new TransactionEvent();
         mockEvent.setTransactionId(0L); // No transaction ID for direct payments
-        mockEvent.setTotalAmount(request.getAmount());
+        mockEvent.setTotalAmount(request.getAmount().doubleValue());
         mockEvent.setStatus("STARTED");
         mockEvent.setTimestamp(System.currentTimeMillis());
 
-        PaymentTransaction transaction = paymentService.processPaymentForTransaction(mockEvent);
+        PaymentTransaction transaction = paymentService.processPaymentForTransaction(mockEvent, request);
         PaymentResponse response = mapToResponse(transaction);
         return ResponseEntity.ok(response);
     }

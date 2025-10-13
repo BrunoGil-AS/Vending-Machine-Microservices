@@ -4,6 +4,8 @@ import com.vendingmachine.transaction.transaction.dto.PurchaseRequestDTO;
 import com.vendingmachine.transaction.transaction.dto.PurchaseItemDTO;
 import com.vendingmachine.transaction.transaction.dto.TransactionDTO;
 import com.vendingmachine.transaction.transaction.dto.TransactionSummaryDTO;
+import com.vendingmachine.transaction.transaction.dto.PaymentInfo;
+import com.vendingmachine.transaction.transaction.dto.PaymentMethod;
 import com.vendingmachine.transaction.kafka.KafkaEventService;
 import com.vendingmachine.common.event.TransactionEvent;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +33,6 @@ import java.util.stream.Collectors;
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
-    private final ProcessedEventRepository processedEventRepository;
     private final KafkaEventService kafkaEventService;
     private final RestTemplate restTemplate;
 
@@ -45,10 +46,17 @@ public class TransactionService {
     public TransactionDTO purchase(PurchaseRequestDTO request) {
         log.info("Starting anonymous purchase transaction for {} items", request.getItems().size());
 
+        // Validate payment information
+        PaymentInfo paymentInfo = request.getPaymentInfo();
+        if (paymentInfo == null) {
+            throw new RuntimeException("Payment information is required");
+        }
+
         // Create transaction entity (anonymous - no customerId)
         Transaction transaction = Transaction.builder()
                 .status(TransactionStatus.PENDING)
                 .totalAmount(BigDecimal.ZERO) // Will calculate after inventory check
+                .paymentMethod(paymentInfo.getPaymentMethod().name())
                 .build();
 
         // Check inventory availability synchronously (critical for immediate feedback)
@@ -62,6 +70,31 @@ public class TransactionService {
         BigDecimal totalAmount = calculateTotalAmount(request.getItems());
         transaction.setTotalAmount(totalAmount);
 
+        // Process payment synchronously before proceeding
+        boolean paymentSuccess = processPayment(paymentInfo, totalAmount);
+        if (!paymentSuccess) {
+            transaction.setStatus(TransactionStatus.FAILED);
+            transactionRepository.save(transaction);
+            throw new RuntimeException("Payment processing failed");
+        }
+
+        // Calculate change for cash payments
+        if (paymentInfo.getPaymentMethod() == PaymentMethod.CASH) {
+            BigDecimal paidAmount = paymentInfo.getPaidAmount();
+            if (paidAmount != null && paidAmount.compareTo(totalAmount) >= 0) {
+                transaction.setPaidAmount(paidAmount);
+                transaction.setChangeAmount(paidAmount.subtract(totalAmount));
+            } else {
+                transaction.setStatus(TransactionStatus.FAILED);
+                transactionRepository.save(transaction);
+                throw new RuntimeException("Insufficient cash amount provided");
+            }
+        } else {
+            // For card payments, paid amount equals total amount
+            transaction.setPaidAmount(totalAmount);
+            transaction.setChangeAmount(BigDecimal.ZERO);
+        }
+
         // Create transaction items
         List<TransactionItem> items = request.getItems().stream()
                 .map(item -> TransactionItem.builder()
@@ -73,9 +106,10 @@ public class TransactionService {
                 .collect(Collectors.toList());
 
         transaction.setItems(items);
+        transaction.setStatus(TransactionStatus.PROCESSING); // Move to processing after payment
         Transaction saved = transactionRepository.save(transaction);
 
-        // Publish transaction started event (will trigger payment processing)
+        // Publish transaction started event (will trigger dispensing)
         TransactionEvent transactionEvent = new TransactionEvent(
             "txn-start-" + saved.getId() + "-" + System.currentTimeMillis(),
             saved.getId(),
@@ -139,6 +173,38 @@ public class TransactionService {
         } catch (Exception e) {
             log.error("Failed to get product price for {}", productId, e);
             return BigDecimal.ZERO;
+        }
+    }
+
+    @SuppressWarnings("null")
+    private boolean processPayment(PaymentInfo paymentInfo, BigDecimal amount) {
+        try {
+            String url = paymentServiceUrl + "/api/payment/process";
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Internal-Service", "transaction-service");
+
+            Map<String, Object> paymentRequest = Map.of(
+                "paymentMethod", paymentInfo.getPaymentMethod().name(),
+                "amount", amount,
+                "cardNumber", paymentInfo.getCardNumber(),
+                "cardHolderName", paymentInfo.getCardHolderName(),
+                "expiryDate", paymentInfo.getExpiryDate(),
+                "paidAmount", paymentInfo.getPaidAmount()
+            );
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(paymentRequest, headers);
+
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                url, HttpMethod.POST, entity, new ParameterizedTypeReference<Map<String, Object>>() {});
+            if (response.getBody() != null) {
+                Boolean success = (Boolean) response.getBody().get("success");
+                log.info("Payment processing result: {}", success);
+                return success != null && success;
+            }
+            return false;
+        } catch (Exception e) {
+            log.error("Failed to process payment", e);
+            return false;
         }
     }
 
@@ -299,6 +365,9 @@ public class TransactionService {
                                 .build())
                         .collect(Collectors.toList()))
                 .totalAmount(transaction.getTotalAmount())
+                .paymentMethod(transaction.getPaymentMethod())
+                .paidAmount(transaction.getPaidAmount())
+                .changeAmount(transaction.getChangeAmount())
                 .status(transaction.getStatus())
                 .createdAt(transaction.getCreatedAt())
                 .updatedAt(transaction.getUpdatedAt())
