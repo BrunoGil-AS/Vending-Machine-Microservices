@@ -3,6 +3,9 @@ package com.vendingmachine.transaction.transaction;
 import com.vendingmachine.transaction.transaction.dto.PurchaseRequestDTO;
 import com.vendingmachine.transaction.transaction.dto.PurchaseItemDTO;
 import com.vendingmachine.transaction.transaction.dto.TransactionDTO;
+import com.vendingmachine.transaction.transaction.dto.TransactionSummaryDTO;
+import com.vendingmachine.transaction.kafka.KafkaEventService;
+import com.vendingmachine.common.event.TransactionEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,8 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,6 +31,8 @@ import java.util.stream.Collectors;
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
+    private final ProcessedEventRepository processedEventRepository;
+    private final KafkaEventService kafkaEventService;
     private final RestTemplate restTemplate;
 
     @Value("${services.inventory.url:http://localhost:8081}")
@@ -44,7 +51,7 @@ public class TransactionService {
                 .totalAmount(BigDecimal.ZERO) // Will calculate after inventory check
                 .build();
 
-        // Check inventory availability
+        // Check inventory availability synchronously (critical for immediate feedback)
         if (!checkInventoryAvailability(request.getItems())) {
             transaction.setStatus(TransactionStatus.FAILED);
             transactionRepository.save(transaction);
@@ -54,14 +61,6 @@ public class TransactionService {
         // Calculate total amount from inventory response
         BigDecimal totalAmount = calculateTotalAmount(request.getItems());
         transaction.setTotalAmount(totalAmount);
-
-        // Process payment (anonymous transaction)
-        boolean paymentSuccess = processPayment(totalAmount);
-        if (!paymentSuccess) {
-            transaction.setStatus(TransactionStatus.FAILED);
-            transactionRepository.save(transaction);
-            throw new RuntimeException("Payment processing failed");
-        }
 
         // Create transaction items
         List<TransactionItem> items = request.getItems().stream()
@@ -74,14 +73,19 @@ public class TransactionService {
                 .collect(Collectors.toList());
 
         transaction.setItems(items);
-        transaction.setStatus(TransactionStatus.COMPLETED);
-
         Transaction saved = transactionRepository.save(transaction);
 
-        // TODO: Send dispensing event via Kafka
-        // TODO: Update inventory via Kafka event
+        // Publish transaction started event (will trigger payment processing)
+        TransactionEvent transactionEvent = new TransactionEvent(
+            "txn-start-" + saved.getId() + "-" + System.currentTimeMillis(),
+            saved.getId(),
+            "STARTED",
+            totalAmount.doubleValue(),
+            System.currentTimeMillis()
+        );
+        kafkaEventService.publishTransactionEvent(transactionEvent);
 
-        log.info("Purchase transaction completed successfully: {}", saved.getId());
+        log.info("Purchase transaction initiated: {}", saved.getId());
         return mapToDTO(saved);
     }
 
@@ -138,27 +142,77 @@ public class TransactionService {
         }
     }
 
-    @SuppressWarnings("null")
-    private boolean processPayment(BigDecimal amount) {
+    @Transactional
+    public void compensateTransaction(Long transactionId, String reason) {
+        log.info("Starting compensation for transaction {}: {}", transactionId, reason);
+
+        Optional<Transaction> transactionOpt = transactionRepository.findById(transactionId);
+        if (transactionOpt.isEmpty()) {
+            log.warn("Transaction {} not found for compensation", transactionId);
+            return;
+        }
+
+        Transaction transaction = transactionOpt.get();
+
+        // Only compensate if transaction is in processing state
+        if (transaction.getStatus() != TransactionStatus.PROCESSING) {
+            log.warn("Transaction {} is not in PROCESSING state, cannot compensate. Current status: {}",
+                    transactionId, transaction.getStatus());
+            return;
+        }
+
         try {
-            String url = paymentServiceUrl + "/api/payment/process";
+            // Attempt to refund payment
+            boolean refundSuccess = refundPayment(transaction.getTotalAmount());
+            if (refundSuccess) {
+                transaction.setStatus(TransactionStatus.CANCELLED);
+                log.info("Successfully compensated transaction {} with refund", transactionId);
+            } else {
+                transaction.setStatus(TransactionStatus.FAILED);
+                log.warn("Failed to refund payment for transaction {}, marking as FAILED", transactionId);
+            }
+
+            transactionRepository.save(transaction);
+
+            // Publish compensation event
+            TransactionEvent compensationEvent = new TransactionEvent(
+                "txn-comp-" + transactionId + "-" + System.currentTimeMillis(),
+                transactionId,
+                "COMPENSATED",
+                transaction.getTotalAmount().doubleValue(),
+                System.currentTimeMillis()
+            );
+            kafkaEventService.publishTransactionEvent(compensationEvent);
+
+        } catch (Exception e) {
+            log.error("Failed to compensate transaction {}: {}", transactionId, e.getMessage());
+            // Mark as failed but don't throw - compensation should be idempotent
+            transaction.setStatus(TransactionStatus.FAILED);
+            transactionRepository.save(transaction);
+        }
+    }
+
+    @SuppressWarnings("null")
+    private boolean refundPayment(BigDecimal amount) {
+        try {
+            String url = paymentServiceUrl + "/api/payment/refund";
             HttpHeaders headers = new HttpHeaders();
             headers.set("X-Internal-Service", "transaction-service");
-            Map<String, Object> paymentRequest = Map.of(
+            Map<String, Object> refundRequest = Map.of(
                 "amount", amount
             );
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(paymentRequest, headers);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(refundRequest, headers);
 
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                 url, HttpMethod.POST, entity, new ParameterizedTypeReference<Map<String, Object>>() {});
             if (response.getBody() != null) {
                 Boolean success = (Boolean) response.getBody().get("success");
-                log.info("Payment processing result: {}", success);
+                log.info("Payment refund result: {}", success);
                 return success != null && success;
             }
             return false;
         } catch (Exception e) {
-            log.error("Failed to process payment", e);
+            log.error("Failed to process refund", e);
             return false;
         }
     }
@@ -168,6 +222,68 @@ public class TransactionService {
                 .stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
+    }
+
+    public List<TransactionDTO> getTransactionsByStatus(TransactionStatus status) {
+        return transactionRepository.findByStatusOrderByCreatedAtDesc(status)
+                .stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    public TransactionDTO getTransactionById(Long id) {
+        return transactionRepository.findById(id)
+                .map(this::mapToDTO)
+                .orElseThrow(() -> new RuntimeException("Transaction not found: " + id));
+    }
+
+    public TransactionSummaryDTO getTransactionSummary() {
+        List<Transaction> allTransactions = transactionRepository.findAll();
+
+        long totalTransactions = allTransactions.size();
+        BigDecimal totalRevenue = allTransactions.stream()
+                .filter(t -> t.getStatus() == TransactionStatus.COMPLETED)
+                .map(Transaction::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        Map<String, Long> transactionsByStatus = allTransactions.stream()
+                .collect(Collectors.groupingBy(t -> t.getStatus().name(), Collectors.counting()));
+
+        Map<LocalDate, BigDecimal> dailyRevenue = allTransactions.stream()
+                .filter(t -> t.getStatus() == TransactionStatus.COMPLETED)
+                .collect(Collectors.groupingBy(
+                        t -> t.getCreatedAt().toLocalDate(),
+                        Collectors.reducing(BigDecimal.ZERO, Transaction::getTotalAmount, BigDecimal::add)
+                ));
+
+        Map<LocalDate, Long> dailyTransactionCount = allTransactions.stream()
+                .collect(Collectors.groupingBy(
+                        t -> t.getCreatedAt().toLocalDate(),
+                        Collectors.counting()
+                ));
+
+        BigDecimal averageTransactionValue = totalTransactions > 0 ?
+                totalRevenue.divide(BigDecimal.valueOf(totalTransactions), 2, java.math.RoundingMode.HALF_UP) :
+                BigDecimal.ZERO;
+
+        long successfulTransactions = transactionsByStatus.getOrDefault("COMPLETED", 0L);
+        long failedTransactions = transactionsByStatus.getOrDefault("FAILED", 0L) +
+                                 transactionsByStatus.getOrDefault("CANCELLED", 0L);
+        BigDecimal successRate = totalTransactions > 0 ?
+                BigDecimal.valueOf(successfulTransactions).divide(BigDecimal.valueOf(totalTransactions), 4, java.math.RoundingMode.HALF_UP) :
+                BigDecimal.ZERO;
+
+        return new TransactionSummaryDTO(
+                totalTransactions,
+                totalRevenue,
+                transactionsByStatus,
+                dailyRevenue,
+                dailyTransactionCount,
+                averageTransactionValue,
+                successfulTransactions,
+                failedTransactions,
+                successRate
+        );
     }
 
     private TransactionDTO mapToDTO(Transaction transaction) {

@@ -1,4 +1,4 @@
-package com.vendingmachine.payment.payment;
+package com.vendingmachine.dispensing.dispensing;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -8,28 +8,30 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "payment_transactions")
+@Table(name = "dispensing_transactions")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class PaymentTransaction {
+public class DispensingTransaction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "transaction_id")
+    @Column(name = "transaction_id", nullable = false)
     private Long transactionId;
 
-    @Column(nullable = false)
-    private Double amount;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private PaymentMethod method;
+    @Column(name = "product_id", nullable = false)
+    private Long productId;
 
     @Column(nullable = false)
-    private String status; // e.g., "PENDING", "SUCCESS", "FAILED"
+    private Integer quantity;
+
+    @Column(nullable = false)
+    private String status; // e.g., "PENDING", "SUCCESS", "FAILED", "JAMMED"
+
+    @Column
+    private String errorMessage;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;

@@ -1,5 +1,6 @@
 package com.vendingmachine.payment.payment;
 
+import com.vendingmachine.common.event.TransactionEvent;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +19,14 @@ public class PaymentController {
 
     @PostMapping("/payment/process")
     public ResponseEntity<PaymentResponse> processPayment(@Valid @RequestBody PaymentRequest request) {
-        PaymentTransaction transaction = paymentService.processPayment(request.getAmount(), request.getMethod());
+        // For backward compatibility, create a mock TransactionEvent
+        TransactionEvent mockEvent = new TransactionEvent();
+        mockEvent.setTransactionId(0L); // No transaction ID for direct payments
+        mockEvent.setTotalAmount(request.getAmount());
+        mockEvent.setStatus("STARTED");
+        mockEvent.setTimestamp(System.currentTimeMillis());
+
+        PaymentTransaction transaction = paymentService.processPaymentForTransaction(mockEvent);
         PaymentResponse response = mapToResponse(transaction);
         return ResponseEntity.ok(response);
     }

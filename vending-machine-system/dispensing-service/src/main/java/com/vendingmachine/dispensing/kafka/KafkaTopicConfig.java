@@ -1,4 +1,4 @@
-package com.vendingmachine.payment.kafka;
+package com.vendingmachine.dispensing.kafka;
 
 import org.apache.kafka.clients.admin.NewTopic;
 import org.springframework.context.annotation.Bean;
@@ -9,8 +9,8 @@ import org.springframework.kafka.config.TopicBuilder;
 public class KafkaTopicConfig {
 
     @Bean
-    public NewTopic paymentEventsTopic() {
-        return TopicBuilder.name("payment-events")
+    public NewTopic dispensingEventsTopic() {
+        return TopicBuilder.name("dispensing-events")
                 .partitions(1)
                 .replicas(1)
                 .build();

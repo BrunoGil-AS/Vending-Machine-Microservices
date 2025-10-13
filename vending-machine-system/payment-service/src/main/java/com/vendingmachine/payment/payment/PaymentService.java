@@ -1,6 +1,7 @@
 package com.vendingmachine.payment.payment;
 
 import com.vendingmachine.common.event.PaymentEvent;
+import com.vendingmachine.common.event.TransactionEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 
@@ -29,24 +31,32 @@ public class PaymentService {
     private final Random random = new Random();
 
     @Transactional
-    public PaymentTransaction processPayment(Double amount, PaymentMethod method) {
-        log.info("Processing payment: amount={}, method={}", amount, method);
+    public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent) {
+        log.info("Processing payment for transaction: {} with amount {}", transactionEvent.getTransactionId(), transactionEvent.getTotalAmount());
+
+        // Check if payment already exists for this transaction
+        Optional<PaymentTransaction> existingPayment = transactionRepository.findByTransactionId(transactionEvent.getTransactionId());
+        if (existingPayment.isPresent()) {
+            log.warn("Payment already exists for transaction {}", transactionEvent.getTransactionId());
+            return existingPayment.get();
+        }
 
         PaymentTransaction transaction = new PaymentTransaction();
-        transaction.setAmount(amount);
-        transaction.setMethod(method);
+        transaction.setTransactionId(transactionEvent.getTransactionId());
+        transaction.setAmount(transactionEvent.getTotalAmount());
+        transaction.setMethod(PaymentMethod.CREDIT_CARD); // Default to credit card for vending machines
         transaction.setStatus("PENDING");
 
         transaction = transactionRepository.save(transaction);
 
-        boolean success = simulatePayment(method);
+        boolean success = simulatePayment(PaymentMethod.CREDIT_CARD);
 
         if (success) {
             transaction.setStatus("SUCCESS");
-            log.info("Payment successful for transaction {}", transaction.getId());
+            log.info("Payment successful for transaction {}", transactionEvent.getTransactionId());
         } else {
             transaction.setStatus("FAILED");
-            log.warn("Payment failed for transaction {}", transaction.getId());
+            log.warn("Payment failed for transaction {}", transactionEvent.getTransactionId());
         }
 
         transaction = transactionRepository.save(transaction);
