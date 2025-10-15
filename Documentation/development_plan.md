@@ -381,20 +381,20 @@ _Tasks:_
 
 - Add Spring Boot Actuator to all services
 - Implement health checks for each service
-- Add custom metrics for business operations:
+- Add custom metrics for business operations using Aspects (Spring AOP) for transversal collection:
   - Transaction success rates
   - Inventory levels
   - Payment processing times
   - Dispensing success rates
 - Create monitoring endpoints for admin dashboard
-- Implement correlation ID tracking across services
-- Add structured logging for better debugging
+- Implement correlation ID tracking across services using Aspects for propagation
+- Add structured logging for better debugging using Aspects for consistent logging
 
 _Deliverables:_
 
 - Comprehensive monitoring
 - Health check endpoints
-- Business metrics tracking
+- Business metrics tracking via Aspects
 - Improved observability
 
 #### **Day 15 - Security & Data Validation**
