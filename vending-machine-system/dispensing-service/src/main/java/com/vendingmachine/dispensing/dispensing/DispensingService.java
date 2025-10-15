@@ -17,7 +17,8 @@ import java.util.UUID;
 @Slf4j
 public class DispensingService {
 
-    private final DispensingTransactionRepository dispensingRepository;
+    private final DispensingOperationRepository dispensingRepository;
+    private final HardwareStatusService hardwareStatusService;
     private final KafkaTemplate<String, DispensingEvent> kafkaTemplate;
 
     @Value("${dispensing.simulation.success-rate:0.98}")
@@ -35,8 +36,15 @@ public class DispensingService {
     public void dispenseProductsForTransaction(Long transactionId, List<DispensingItem> items) {
         log.info("Starting dispensing for transaction {} with {} items", transactionId, items.size());
 
+        // Check hardware status before dispensing
+        if (!hardwareStatusService.isHardwareOperational()) {
+            log.error("Hardware is not operational, cannot dispense for transaction {}", transactionId);
+            // Publish failure event or handle accordingly
+            return;
+        }
+
         for (DispensingItem item : items) {
-            DispensingTransaction dispensing = new DispensingTransaction();
+            DispensingOperation dispensing = new DispensingOperation();
             dispensing.setTransactionId(transactionId);
             dispensing.setProductId(item.getProductId());
             dispensing.setQuantity(item.getQuantity());
@@ -54,6 +62,8 @@ public class DispensingService {
                 dispensing.setStatus("FAILED");
                 dispensing.setErrorMessage("Dispensing failed - possible jam or hardware error");
                 log.warn("Failed to dispense product {} for transaction {}", item.getProductId(), transactionId);
+                // Report hardware error
+                hardwareStatusService.reportHardwareError("dispenser_motor", "Dispensing failure detected");
             }
 
             dispensingRepository.save(dispensing);
@@ -69,14 +79,27 @@ public class DispensingService {
         // Check for jam
         if (random.nextDouble() < jamProbability) {
             log.warn("Dispensing jam detected for product {}", item.getProductId());
+            hardwareStatusService.reportHardwareError("product_chute", "Jam detected during dispensing");
             return false;
         }
 
-        // Check for general failure
-        return random.nextDouble() < successRate;
+        // Simulate dispensing
+        boolean dispensed = random.nextDouble() < successRate;
+
+        if (dispensed) {
+            // Simulate verification - check if actually dispensed
+            boolean verified = random.nextDouble() < 0.95; // 95% verification success
+            if (!verified) {
+                log.warn("Dispensing verification failed for product {}", item.getProductId());
+                hardwareStatusService.reportHardwareError("sensor_array", "Sensor verification failed");
+                return false;
+            }
+        }
+
+        return dispensed;
     }
 
-    private void publishDispensingEvent(DispensingTransaction dispensing) {
+    private void publishDispensingEvent(DispensingOperation dispensing) {
         DispensingEvent event = new DispensingEvent();
         event.setEventId(UUID.randomUUID().toString());
         event.setProductId(dispensing.getProductId());
@@ -87,11 +110,11 @@ public class DispensingService {
         log.info("Published dispensing event: {}", event);
     }
 
-    public List<DispensingTransaction> getAllDispensingTransactions() {
+    public List<DispensingOperation> getAllDispensingTransactions() {
         return dispensingRepository.findAll();
     }
 
-    public List<DispensingTransaction> getDispensingTransactionsByTransactionId(Long transactionId) {
+    public List<DispensingOperation> getDispensingTransactionsByTransactionId(Long transactionId) {
         return dispensingRepository.findByTransactionId(transactionId);
     }
 }

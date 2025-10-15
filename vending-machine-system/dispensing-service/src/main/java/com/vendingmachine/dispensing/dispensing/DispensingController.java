@@ -12,16 +12,35 @@ import java.util.List;
 public class DispensingController {
 
     private final DispensingService dispensingService;
+    private final HardwareStatusService hardwareStatusService;
 
     @GetMapping("/dispensing/transactions")
-    public ResponseEntity<List<DispensingTransaction>> getAllDispensingTransactions() {
-        List<DispensingTransaction> transactions = dispensingService.getAllDispensingTransactions();
+    public ResponseEntity<List<DispensingOperation>> getAllDispensingTransactions() {
+        List<DispensingOperation> transactions = dispensingService.getAllDispensingTransactions();
         return ResponseEntity.ok(transactions);
     }
 
     @GetMapping("/dispensing/transactions/{transactionId}")
-    public ResponseEntity<List<DispensingTransaction>> getDispensingTransactionsByTransactionId(@PathVariable Long transactionId) {
-        List<DispensingTransaction> transactions = dispensingService.getDispensingTransactionsByTransactionId(transactionId);
+    public ResponseEntity<List<DispensingOperation>> getDispensingTransactionsByTransactionId(@PathVariable Long transactionId) {
+        List<DispensingOperation> transactions = dispensingService.getDispensingTransactionsByTransactionId(transactionId);
         return ResponseEntity.ok(transactions);
+    }
+
+    @GetMapping("/hardware/status")
+    public ResponseEntity<List<HardwareStatus>> getHardwareStatus() {
+        List<HardwareStatus> statuses = hardwareStatusService.getAllHardwareStatus();
+        return ResponseEntity.ok(statuses);
+    }
+
+    @PostMapping("/hardware/{componentName}/operational")
+    public ResponseEntity<Void> markComponentOperational(@PathVariable String componentName) {
+        hardwareStatusService.markComponentOperational(componentName);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/hardware/operational")
+    public ResponseEntity<Boolean> isHardwareOperational() {
+        boolean operational = hardwareStatusService.isHardwareOperational();
+        return ResponseEntity.ok(operational);
     }
 }
