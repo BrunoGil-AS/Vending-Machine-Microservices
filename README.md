@@ -232,6 +232,28 @@ curl -X GET http://localhost:8080/api/admin/inventory/products \
 
 - [Development Plan](docs/development-plan.md)
 
+## 🧪 Testing Scripts
+
+Python test scripts are available for testing the system:
+
+- **`admin_test.py`** - Tests all admin endpoints (user management, product CRUD, stock management)
+- **`customer_flow_test.py`** - Simulates customer purchases with different payment methods
+
+See [TEST_SCRIPTS_README.md](TEST_SCRIPTS_README.md) for detailed usage instructions.
+
+### Quick Start
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run admin tests
+python3 admin_test.py
+
+# Run customer flow tests
+python3 customer_flow_test.py
+```
+
 ## 👥 Authors
 
 - Bruno Gil Ramirez
