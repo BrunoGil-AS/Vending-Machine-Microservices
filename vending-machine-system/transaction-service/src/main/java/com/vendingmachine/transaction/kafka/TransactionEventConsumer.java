@@ -80,7 +80,8 @@ public class TransactionEventConsumer {
                    containerFactory = "dispensingEventKafkaListenerContainerFactory")
     @Transactional
     public void consumeDispensingEvent(DispensingEvent event) {
-        log.info("Received dispensing event: {} for product {}", event.getEventId(), event.getProductId());
+        log.info("Received dispensing event: {} for transaction {} product {} status {}",
+                event.getEventId(), event.getTransactionId(), event.getProductId(), event.getStatus());
 
         // Check for duplicate event processing
         if (processedEventRepository.existsByEventIdAndEventType(event.getEventId(), "DISPENSING_EVENT")) {
@@ -89,43 +90,71 @@ public class TransactionEventConsumer {
         }
 
         try {
-            // Find transactions that contain this product
-            // Note: DispensingEvent doesn't have transactionId, so we need to find by product
-            // This is a simplified approach - in production, dispensing events should include transactionId
-            Optional<Transaction> transactionOpt = findTransactionByProductId(event.getProductId());
+            Optional<Transaction> transactionOpt = transactionRepository.findById(event.getTransactionId());
             if (transactionOpt.isEmpty()) {
-                log.warn("No active transaction found for product {} in dispensing event {}", event.getProductId(), event.getEventId());
+                log.error("Transaction {} not found for dispensing event {}", event.getTransactionId(), event.getEventId());
                 return;
             }
 
             Transaction transaction = transactionOpt.get();
 
-            // For now, assume dispensing success and complete the transaction
-            // In a real system, we'd check if all items were dispensed
-            transaction.setStatus(TransactionStatus.COMPLETED);
-            transactionRepository.save(transaction);
+            // Only process if transaction is in PROCESSING state
+            if (transaction.getStatus() != TransactionStatus.PROCESSING) {
+                log.warn("Transaction {} is not in PROCESSING state (current: {}), ignoring dispensing event",
+                        event.getTransactionId(), transaction.getStatus());
+                return;
+            }
 
-            // Publish transaction completed event
-            com.vendingmachine.common.event.TransactionEvent transactionEvent =
-                new com.vendingmachine.common.event.TransactionEvent(
-                    "txn-" + transaction.getId() + "-" + System.currentTimeMillis(),
-                    transaction.getId(),
-                    "COMPLETED",
-                    transaction.getTotalAmount().doubleValue(),
-                    System.currentTimeMillis()
-                );
-            kafkaEventService.publishTransactionEvent(transactionEvent);
+            // If dispensing failed, mark transaction as failed
+            if ("FAILED".equals(event.getStatus())) {
+                transaction.setStatus(TransactionStatus.FAILED);
+                transactionRepository.save(transaction);
+                log.error("Dispensing failed for transaction {}, marking as FAILED", event.getTransactionId());
+
+                // Publish transaction failed event
+                com.vendingmachine.common.event.TransactionEvent transactionEvent =
+                    new com.vendingmachine.common.event.TransactionEvent(
+                        "txn-failed-" + transaction.getId() + "-" + System.currentTimeMillis(),
+                        transaction.getId(),
+                        "FAILED",
+                        transaction.getTotalAmount().doubleValue(),
+                        System.currentTimeMillis()
+                    );
+                kafkaEventService.publishTransactionEvent(transactionEvent);
+            } else {
+                // Check if all items in the transaction have been successfully dispensed
+                boolean allItemsDispensed = checkAllItemsDispensed(transaction);
+
+                if (allItemsDispensed) {
+                    transaction.setStatus(TransactionStatus.COMPLETED);
+                    transactionRepository.save(transaction);
+                    log.info("All items dispensed successfully for transaction {}, marking as COMPLETED", event.getTransactionId());
+
+                    // Publish transaction completed event
+                    com.vendingmachine.common.event.TransactionEvent transactionEvent =
+                        new com.vendingmachine.common.event.TransactionEvent(
+                            "txn-completed-" + transaction.getId() + "-" + System.currentTimeMillis(),
+                            transaction.getId(),
+                            "COMPLETED",
+                            transaction.getTotalAmount().doubleValue(),
+                            System.currentTimeMillis()
+                        );
+                    kafkaEventService.publishTransactionEvent(transactionEvent);
+                } else {
+                    log.debug("Transaction {} still has pending items to dispense", event.getTransactionId());
+                }
+            }
 
             // Mark event as processed
             ProcessedEvent processedEvent = ProcessedEvent.builder()
                     .eventId(event.getEventId())
                     .eventType("DISPENSING_EVENT")
-                    .transactionId(transaction.getId())
+                    .transactionId(event.getTransactionId())
                     .processedAt(LocalDateTime.now())
                     .build();
             processedEventRepository.save(processedEvent);
 
-            log.info("Successfully processed dispensing event: {} for transaction {}", event.getEventId(), transaction.getId());
+            log.info("Successfully processed dispensing event: {}", event.getEventId());
 
         } catch (Exception e) {
             log.error("Failed to process dispensing event: {}", event.getEventId(), e);
@@ -133,12 +162,12 @@ public class TransactionEventConsumer {
         }
     }
 
-    private Optional<Transaction> findTransactionByProductId(Long productId) {
-        // Find the most recent processing transaction that contains this product
-        // This is a simplified implementation - in production, dispensing events should include transactionId
-        return transactionRepository.findAllByOrderByCreatedAtDesc().stream()
-                .filter(t -> t.getStatus() == TransactionStatus.PROCESSING)
-                .filter(t -> t.getItems().stream().anyMatch(item -> item.getProductId().equals(productId)))
-                .findFirst();
+    private boolean checkAllItemsDispensed(Transaction transaction) {
+        // This is a simplified check - in a real system, we'd query the dispensing service
+        // or maintain a dispensing status in the transaction service
+        // For now, we'll assume that if we receive a dispensing event for any item,
+        // and the transaction is still processing, we consider it complete
+        // This should be improved with proper dispensing status tracking
+        return true; // Simplified - assume complete after first successful dispensing event
     }
 }

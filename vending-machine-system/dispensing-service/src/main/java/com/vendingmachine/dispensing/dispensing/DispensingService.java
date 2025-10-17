@@ -102,8 +102,10 @@ public class DispensingService {
     private void publishDispensingEvent(DispensingOperation dispensing) {
         DispensingEvent event = new DispensingEvent();
         event.setEventId(UUID.randomUUID().toString());
+        event.setTransactionId(dispensing.getTransactionId());
         event.setProductId(dispensing.getProductId());
         event.setQuantity(dispensing.getQuantity());
+        event.setStatus(dispensing.getStatus()); // SUCCESS or FAILED
         event.setTimestamp(System.currentTimeMillis());
 
         kafkaTemplate.send(dispensingEventsTopic, event.getEventId(), event);

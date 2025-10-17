@@ -9,7 +9,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class DispensingEvent {
     private String eventId;
+    private Long transactionId;
     private Long productId;
     private Integer quantity;
+    private String status; // SUCCESS, FAILED
     private Long timestamp;
 }

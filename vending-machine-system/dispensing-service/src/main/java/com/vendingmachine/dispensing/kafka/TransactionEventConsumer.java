@@ -57,20 +57,18 @@ public class TransactionEventConsumer {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private List<DispensingItem> getTransactionItems(Long transactionId) {
         try {
-            String url = transactionServiceUrl + "/api/admin/transaction/" + transactionId;
+            String url = transactionServiceUrl + "/api/admin/transaction/" + transactionId + "/items";
             HttpHeaders headers = new HttpHeaders();
             headers.set("X-Internal-Service", "dispensing-service");
             HttpEntity<?> entity = new HttpEntity<>(headers);
 
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                url, HttpMethod.GET, entity, new ParameterizedTypeReference<Map<String, Object>>() {});
+            ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
+                url, HttpMethod.GET, entity, new ParameterizedTypeReference<List<Map<String, Object>>>() {});
 
-            Map<String, Object> body = response.getBody();
-            if (body != null && body.containsKey("items")) {
-                List<Map<String, Object>> items = (List<Map<String, Object>>) body.get("items");
+            List<Map<String, Object>> items = response.getBody();
+            if (items != null && !items.isEmpty()) {
                 return items.stream()
                     .map(item -> new DispensingItem(
                         ((Number) item.get("productId")).longValue(),

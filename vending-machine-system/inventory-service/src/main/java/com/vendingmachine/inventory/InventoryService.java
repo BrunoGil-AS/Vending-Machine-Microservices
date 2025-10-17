@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,6 +38,11 @@ public class InventoryService {
         List<Product> products = productRepository.findAll();
         logger.info("Retrieved {} products", products.size());
         return products;
+    }
+
+    public Optional<Product> getProductById(Long productId) {
+        logger.debug("Retrieving product with ID: {}", productId);
+        return productRepository.findById(productId);
     }
 
     public Optional<Stock> getStockByProductId(Long productId) {
@@ -243,6 +249,33 @@ public class InventoryService {
         }
 
         return updatedStock;
+    }
+
+    public boolean checkInventoryAvailability(List<Map<String, Object>> items) {
+        logger.debug("Checking inventory availability for {} items", items.size());
+
+        for (Map<String, Object> item : items) {
+            Long productId = ((Number) item.get("productId")).longValue();
+            Integer quantity = ((Number) item.get("quantity")).intValue();
+
+            logger.debug("Checking availability for product ID: {}, requested quantity: {}", productId, quantity);
+
+            Optional<Stock> stockOpt = getStockByProductId(productId);
+            if (stockOpt.isEmpty()) {
+                logger.warn("Product ID: {} not found in inventory", productId);
+                return false;
+            }
+
+            Stock stock = stockOpt.get();
+            if (stock.getQuantity() < quantity) {
+                logger.warn("Insufficient stock for product ID: {}. Available: {}, Requested: {}",
+                           productId, stock.getQuantity(), quantity);
+                return false;
+            }
+        }
+
+        logger.info("All items are available in inventory");
+        return true;
     }
 
     public void deleteProduct(Long productId) {

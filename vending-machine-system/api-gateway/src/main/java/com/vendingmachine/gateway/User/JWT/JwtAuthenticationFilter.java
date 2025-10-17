@@ -1,6 +1,9 @@
 package com.vendingmachine.gateway.User.JWT;
 
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -12,7 +15,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
 
 /**
  * JWT Authentication Filter
@@ -29,7 +31,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/api/auth/login",
             "/actuator/health",
             "/api/inventory/products",
-            "/api/transactions/purchase",
+            "/api/inventory/availability",
+            "/api/transaction/purchase",
             "/api/transactions/status",
             "/eureka"
     );

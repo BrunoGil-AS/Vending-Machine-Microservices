@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -29,6 +30,23 @@ public class ProductController {
         List<Product> products = inventoryService.getAllProducts();
         logger.info("Returning {} products", products.size());
         return products;
+    }
+
+    @GetMapping("/inventory/products/{productId}")
+    public ResponseEntity<Product> getProduct(@PathVariable Long productId) {
+        logger.info("Received request to get product with ID: {}", productId);
+        Product product = inventoryService.getProductById(productId)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found with id: " + productId));
+        logger.info("Returning product with ID: {}", productId);
+        return ResponseEntity.ok(product);
+    }
+
+    @PostMapping("/inventory/check-availability")
+    public ResponseEntity<Map<String, Boolean>> checkAvailability(@RequestBody List<Map<String, Object>> items) {
+        logger.info("Received request to check availability for {} items", items.size());
+        boolean available = inventoryService.checkInventoryAvailability(items);
+        logger.info("Inventory availability check result: {}", available);
+        return ResponseEntity.ok(Map.of("available", available));
     }
 
     @GetMapping("/inventory/availability/{productId}")

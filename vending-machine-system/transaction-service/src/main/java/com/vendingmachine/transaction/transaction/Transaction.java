@@ -22,8 +22,6 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // No customerId - transactions are anonymous like real vending machines
-
     @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<TransactionItem> items;
 

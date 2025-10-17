@@ -103,13 +103,24 @@ class VendingMachineCustomerTester:
         print(f"\nAttempting to purchase product {product_id} with {payment_method}...")
         url = f"{self.base_url}/api/transaction/purchase"
         
+        # Get product price for payment calculation
+        product_price = 0
+        for product in self.available_products:
+            if product['id'] == product_id:
+                product_price = product['price']
+                break
+        
+        # Create payment info based on method
+        payment_info = self._create_payment_info(payment_method, product_price)
+        
         purchase_request = {
             "items": [
                 {
                     "productId": product_id,
                     "quantity": 1
                 }
-            ]
+            ],
+            "paymentInfo": payment_info
         }
         
         try:
@@ -147,8 +158,21 @@ class VendingMachineCustomerTester:
             print("\n⚠ Skipping purchase - some products not available")
             return None
         
+        # Calculate total price
+        total_price = 0
+        for item in items:
+            product_id = item['productId']
+            quantity = item['quantity']
+            for product in self.available_products:
+                if product['id'] == product_id:
+                    total_price += product['price'] * quantity
+                    break
+        
         print(f"\nAttempting to purchase {len(items)} different products with {payment_method}...")
         url = f"{self.base_url}/api/transaction/purchase"
+        
+        # Create payment info based on method
+        payment_info = self._create_payment_info(payment_method, total_price)
         
         purchase_request = {
             "items": [
@@ -157,7 +181,8 @@ class VendingMachineCustomerTester:
                     "quantity": item['quantity']
                 }
                 for item in items
-            ]
+            ],
+            "paymentInfo": payment_info
         }
         
         print(f"Purchase details:")
@@ -182,6 +207,26 @@ class VendingMachineCustomerTester:
         except Exception as e:
             print(f"\n✗ Error during purchase: {str(e)}")
             return None
+    
+    def _create_payment_info(self, payment_method: str, amount: float):
+        """Create payment info object based on payment method"""
+        if payment_method == "CASH":
+            # For cash payments, pay exact amount or a bit more
+            paid_amount = amount + 0.50  # Pay a bit extra for change
+            return {
+                "paymentMethod": "CASH",
+                "paidAmount": paid_amount
+            }
+        elif payment_method in ["CREDIT_CARD", "DEBIT_CARD"]:
+            # For card payments, provide card details
+            return {
+                "paymentMethod": payment_method,
+                "cardNumber": "4111111111111111",  # Test card number
+                "cardHolderName": "Test Customer",
+                "expiryDate": "12/25"  # MM/YY format
+            }
+        else:
+            raise ValueError(f"Unsupported payment method: {payment_method}")
     
     def run_customer_scenarios(self):
         """Run all customer flow scenarios"""

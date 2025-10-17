@@ -182,24 +182,32 @@ public class TransactionService {
             String url = paymentServiceUrl + "/api/payment/process";
             HttpHeaders headers = new HttpHeaders();
             headers.set("X-Internal-Service", "transaction-service");
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
 
-            Map<String, Object> paymentRequest = Map.of(
-                "paymentMethod", paymentInfo.getPaymentMethod().name(),
-                "amount", amount,
-                "cardNumber", paymentInfo.getCardNumber(),
-                "cardHolderName", paymentInfo.getCardHolderName(),
-                "expiryDate", paymentInfo.getExpiryDate(),
-                "paidAmount", paymentInfo.getPaidAmount()
-            );
+            // Create payment request in the correct format
+            Map<String, Object> paymentRequest = new java.util.HashMap<>();
+            paymentRequest.put("paymentMethod", paymentInfo.getPaymentMethod().name());
+            paymentRequest.put("amount", amount);
+
+            // Add card details for card payments
+            if (paymentInfo.getPaymentMethod() != PaymentMethod.CASH) {
+                paymentRequest.put("cardNumber", paymentInfo.getCardNumber());
+                paymentRequest.put("cardHolderName", paymentInfo.getCardHolderName());
+                paymentRequest.put("expiryDate", paymentInfo.getExpiryDate());
+            } else {
+                // Add paid amount for cash payments
+                paymentRequest.put("paidAmount", paymentInfo.getPaidAmount());
+            }
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(paymentRequest, headers);
 
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                 url, HttpMethod.POST, entity, new ParameterizedTypeReference<Map<String, Object>>() {});
             if (response.getBody() != null) {
-                Boolean success = (Boolean) response.getBody().get("success");
-                log.info("Payment processing result: {}", success);
-                return success != null && success;
+                String status = (String) response.getBody().get("status");
+                boolean success = "SUCCESS".equals(status);
+                log.info("Payment processing result: {} (status: {})", success, status);
+                return success;
             }
             return false;
         } catch (Exception e) {
