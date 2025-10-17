@@ -33,7 +33,7 @@ public class ProcessedEvent {
     @Column(nullable = false)
     private String topic;
 
-    @Column(nullable = false)
+    @Column(name = "`partition`", nullable = false)
     private Integer partition;
 
     @Column(name = "event_offset", nullable = false)
