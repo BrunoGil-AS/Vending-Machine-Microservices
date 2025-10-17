@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -46,7 +45,6 @@ public class PaymentController {
 
     @PostMapping("/payment/refund")
     public ResponseEntity<Map<String, Object>> processRefund(@RequestBody Map<String, Object> refundRequest) {
-        BigDecimal amount = BigDecimal.valueOf(((Number) refundRequest.get("amount")).doubleValue());
         // Simulate refund processing
         boolean success = random.nextDouble() < 0.95; // 95% success rate
         Map<String, Object> response = Map.of("success", success);
