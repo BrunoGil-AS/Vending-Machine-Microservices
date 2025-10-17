@@ -44,4 +44,10 @@ public class AdminTransactionController {
         TransactionSummaryDTO summary = transactionService.getTransactionSummary();
         return ResponseEntity.ok(summary);
     }
+
+    @GetMapping("/{id}/items")
+    public ResponseEntity<List<com.vendingmachine.transaction.transaction.dto.TransactionItemDTO>> getTransactionItems(@PathVariable Long id) {
+        TransactionDTO transaction = transactionService.getTransactionById(id);
+        return ResponseEntity.ok(transaction.getItems());
+    }
 }

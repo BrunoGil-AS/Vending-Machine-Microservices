@@ -6,7 +6,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 
@@ -16,6 +19,7 @@ import java.util.stream.Collectors;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final Random random = new Random();
 
     @PostMapping("/payment/process")
     public ResponseEntity<PaymentResponse> processPayment(@Valid @RequestBody PaymentRequest request) {
@@ -38,6 +42,15 @@ public class PaymentController {
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responses);
+    }
+
+    @PostMapping("/payment/refund")
+    public ResponseEntity<Map<String, Object>> processRefund(@RequestBody Map<String, Object> refundRequest) {
+        BigDecimal amount = BigDecimal.valueOf(((Number) refundRequest.get("amount")).doubleValue());
+        // Simulate refund processing
+        boolean success = random.nextDouble() < 0.95; // 95% success rate
+        Map<String, Object> response = Map.of("success", success);
+        return ResponseEntity.ok(response);
     }
 
     private PaymentResponse mapToResponse(PaymentTransaction transaction) {

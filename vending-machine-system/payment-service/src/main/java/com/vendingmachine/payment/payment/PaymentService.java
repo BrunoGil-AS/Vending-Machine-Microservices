@@ -96,7 +96,7 @@ public class PaymentService {
     private void publishPaymentEvent(PaymentTransaction transaction) {
         PaymentEvent event = new PaymentEvent();
         event.setEventId(UUID.randomUUID().toString());
-        event.setTransactionId(transaction.getId());
+        event.setTransactionId(transaction.getTransactionId());
         event.setAmount(transaction.getAmount());
         event.setMethod(transaction.getMethod().name());
         event.setStatus(transaction.getStatus());
