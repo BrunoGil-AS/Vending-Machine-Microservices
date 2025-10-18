@@ -51,13 +51,28 @@ public class TransactionEventConsumer {
                 // Payment successful - move to processing state
                 transaction.setStatus(TransactionStatus.PROCESSING);
                 log.info("Payment successful for transaction {}, moving to PROCESSING", transaction.getId());
+                
+                // Save transaction first
+                transaction = transactionRepository.save(transaction);
+                
+                // Publish PROCESSING event to trigger dispensing
+                com.vendingmachine.common.event.TransactionEvent processingEvent =
+                    new com.vendingmachine.common.event.TransactionEvent(
+                        "txn-processing-" + transaction.getId() + "-" + System.currentTimeMillis(),
+                        transaction.getId(),
+                        "PROCESSING",
+                        transaction.getTotalAmount().doubleValue(),
+                        System.currentTimeMillis()
+                    );
+                kafkaEventService.publishTransactionEvent(processingEvent);
+                log.info("Published PROCESSING event for transaction {} to trigger dispensing", transaction.getId());
+                
             } else if ("FAILED".equals(event.getStatus())) {
                 // Payment failed - cancel transaction
                 transaction.setStatus(TransactionStatus.CANCELLED);
                 log.info("Payment failed for transaction {}, cancelling transaction", transaction.getId());
+                transactionRepository.save(transaction);
             }
-
-            transactionRepository.save(transaction);
 
             // Mark event as processed
             ProcessedEvent processedEvent = ProcessedEvent.builder()

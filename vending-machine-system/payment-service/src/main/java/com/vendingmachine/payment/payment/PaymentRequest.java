@@ -13,6 +13,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class PaymentRequest {
 
+    @NotNull(message = "Transaction ID is required")
+    private Long transactionId;
+
     @NotNull(message = "Payment method is required")
     private PaymentMethod paymentMethod;
 

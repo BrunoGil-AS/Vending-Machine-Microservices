@@ -70,11 +70,14 @@ public class TransactionService {
         BigDecimal totalAmount = calculateTotalAmount(request.getItems());
         transaction.setTotalAmount(totalAmount);
 
-        // Process payment synchronously before proceeding
-        boolean paymentSuccess = processPayment(paymentInfo, totalAmount);
+        // Save transaction to get ID before processing payment
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        // Process payment synchronously with transaction ID
+        boolean paymentSuccess = processPayment(savedTransaction.getId(), paymentInfo, totalAmount);
         if (!paymentSuccess) {
-            transaction.setStatus(TransactionStatus.FAILED);
-            transactionRepository.save(transaction);
+            savedTransaction.setStatus(TransactionStatus.FAILED);
+            transactionRepository.save(savedTransaction);
             throw new RuntimeException("Payment processing failed");
         }
 
@@ -82,17 +85,17 @@ public class TransactionService {
         if (paymentInfo.getPaymentMethod() == PaymentMethod.CASH) {
             BigDecimal paidAmount = paymentInfo.getPaidAmount();
             if (paidAmount != null && paidAmount.compareTo(totalAmount) >= 0) {
-                transaction.setPaidAmount(paidAmount);
-                transaction.setChangeAmount(paidAmount.subtract(totalAmount));
+                savedTransaction.setPaidAmount(paidAmount);
+                savedTransaction.setChangeAmount(paidAmount.subtract(totalAmount));
             } else {
-                transaction.setStatus(TransactionStatus.FAILED);
-                transactionRepository.save(transaction);
+                savedTransaction.setStatus(TransactionStatus.FAILED);
+                transactionRepository.save(savedTransaction);
                 throw new RuntimeException("Insufficient cash amount provided");
             }
         } else {
             // For card payments, paid amount equals total amount
-            transaction.setPaidAmount(totalAmount);
-            transaction.setChangeAmount(BigDecimal.ZERO);
+            savedTransaction.setPaidAmount(totalAmount);
+            savedTransaction.setChangeAmount(BigDecimal.ZERO);
         }
 
         // Create transaction items
@@ -101,26 +104,26 @@ public class TransactionService {
                         .productId(item.getProductId())
                         .quantity(item.getQuantity())
                         .price(getProductPrice(item.getProductId())) // From inventory
-                        .transaction(transaction)
+                        .transaction(savedTransaction)
                         .build())
                 .collect(Collectors.toList());
 
-        transaction.setItems(items);
-        transaction.setStatus(TransactionStatus.PROCESSING); // Move to processing after payment
-        Transaction saved = transactionRepository.save(transaction);
+        savedTransaction.setItems(items);
+        savedTransaction.setStatus(TransactionStatus.PROCESSING); // Move to processing after payment
+        Transaction finalTransaction = transactionRepository.save(savedTransaction);
 
         // Publish transaction started event (will trigger dispensing)
         TransactionEvent transactionEvent = new TransactionEvent(
-            "txn-start-" + saved.getId() + "-" + System.currentTimeMillis(),
-            saved.getId(),
+            "txn-start-" + finalTransaction.getId() + "-" + System.currentTimeMillis(),
+            finalTransaction.getId(),
             "STARTED",
             totalAmount.doubleValue(),
             System.currentTimeMillis()
         );
         kafkaEventService.publishTransactionEvent(transactionEvent);
 
-        log.info("Purchase transaction initiated: {}", saved.getId());
-        return mapToDTO(saved);
+        log.info("Purchase transaction initiated: {}", finalTransaction.getId());
+        return mapToDTO(finalTransaction);
     }
 
     private boolean checkInventoryAvailability(List<PurchaseItemDTO> items) {
@@ -177,7 +180,7 @@ public class TransactionService {
     }
 
     @SuppressWarnings("null")
-    private boolean processPayment(PaymentInfo paymentInfo, BigDecimal amount) {
+    private boolean processPayment(Long transactionId, PaymentInfo paymentInfo, BigDecimal amount) {
         try {
             String url = paymentServiceUrl + "/api/payment/process";
             HttpHeaders headers = new HttpHeaders();
@@ -186,6 +189,7 @@ public class TransactionService {
 
             // Create payment request in the correct format
             Map<String, Object> paymentRequest = new java.util.HashMap<>();
+            paymentRequest.put("transactionId", transactionId);
             paymentRequest.put("paymentMethod", paymentInfo.getPaymentMethod().name());
             paymentRequest.put("amount", amount);
 

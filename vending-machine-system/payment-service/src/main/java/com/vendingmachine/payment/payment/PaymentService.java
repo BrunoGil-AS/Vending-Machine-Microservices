@@ -33,6 +33,11 @@ public class PaymentService {
 
     @Transactional
     public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent, PaymentRequest paymentRequest) {
+        return processPaymentForTransaction(transactionEvent, paymentRequest, false);
+    }
+    
+    @Transactional
+    public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent, PaymentRequest paymentRequest, boolean publishEvent) {
         log.info("Processing payment for transaction: {} with amount {} and method {}",
                 transactionEvent.getTransactionId(), transactionEvent.getTotalAmount(), paymentRequest.getPaymentMethod());
 
@@ -63,19 +68,22 @@ public class PaymentService {
 
         transaction = transactionRepository.save(transaction);
 
-        // Publish event
-        publishPaymentEvent(transaction);
+        // Only publish event when processing from Kafka (async flow)
+        if (publishEvent) {
+            publishPaymentEvent(transaction);
+        }
 
         return transaction;
     }
 
     @Transactional
     public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent) {
-        // Backward compatibility method - defaults to credit card
+        // Backward compatibility method for Kafka events - defaults to credit card and publishes events
         PaymentRequest defaultRequest = new PaymentRequest();
+        defaultRequest.setTransactionId(transactionEvent.getTransactionId());
         defaultRequest.setPaymentMethod(PaymentMethod.CREDIT_CARD);
         defaultRequest.setAmount(BigDecimal.valueOf(transactionEvent.getTotalAmount()));
-        return processPaymentForTransaction(transactionEvent, defaultRequest);
+        return processPaymentForTransaction(transactionEvent, defaultRequest, true); // Enable event publishing for async flow
     }
 
     private boolean simulatePayment(PaymentRequest paymentRequest) {
