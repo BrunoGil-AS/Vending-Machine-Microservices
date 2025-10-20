@@ -112,17 +112,17 @@ public class TransactionService {
         savedTransaction.setStatus(TransactionStatus.PROCESSING); // Move to processing after payment
         Transaction finalTransaction = transactionRepository.save(savedTransaction);
 
-        // Publish transaction started event (will trigger dispensing)
+        // Publish transaction PROCESSING event to trigger dispensing
         TransactionEvent transactionEvent = new TransactionEvent(
-            "txn-start-" + finalTransaction.getId() + "-" + System.currentTimeMillis(),
+            "txn-processing-" + finalTransaction.getId() + "-" + System.currentTimeMillis(),
             finalTransaction.getId(),
-            "STARTED",
+            "PROCESSING",
             totalAmount.doubleValue(),
             System.currentTimeMillis()
         );
         kafkaEventService.publishTransactionEvent(transactionEvent);
 
-        log.info("Purchase transaction initiated: {}", finalTransaction.getId());
+        log.info("Purchase transaction initiated with PROCESSING status: {}", finalTransaction.getId());
         return mapToDTO(finalTransaction);
     }
 
