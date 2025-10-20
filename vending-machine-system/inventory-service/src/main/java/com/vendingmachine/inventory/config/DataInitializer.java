@@ -1,5 +1,7 @@
 package com.vendingmachine.inventory.config;
 
+import com.vendingmachine.common.event.StockUpdateEvent;
+import com.vendingmachine.inventory.kafka.KafkaProducerService;
 import com.vendingmachine.inventory.product.Product;
 import com.vendingmachine.inventory.product.ProductRepository;
 import com.vendingmachine.inventory.stock.Stock;
@@ -7,20 +9,24 @@ import com.vendingmachine.inventory.stock.StockRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@Profile({"default", "develop"})
 public class DataInitializer implements CommandLineRunner {
 
     private final ProductRepository productRepository;
     private final StockRepository stockRepository;
+    private final KafkaProducerService kafkaProducerService;
 
     @Override
     @Transactional
@@ -57,10 +63,21 @@ public class DataInitializer implements CommandLineRunner {
                 stockRepository.save(stock);
                 loaded++;
 
-                log.debug("Loaded product: {} with stock: {}", product.getName(), stock.getQuantity());
+                // Publish stock update event to Kafka
+                StockUpdateEvent stockEvent = new StockUpdateEvent(
+                        UUID.randomUUID().toString(),
+                        product.getId(),
+                        stock.getQuantity(),
+                        "INITIAL_LOAD",
+                        System.currentTimeMillis()
+                );
+                kafkaProducerService.send("stock-update-events", stockEvent);
+
+                log.debug("Loaded product: {} with stock: {} and published stock event", 
+                         product.getName(), stock.getQuantity());
             }
 
-            log.info("Successfully loaded {} products with initial stock", loaded);
+            log.info("Successfully loaded {} products with initial stock and published stock events", loaded);
 
         } catch (Exception e) {
             log.error("Failed to load initial data", e);
