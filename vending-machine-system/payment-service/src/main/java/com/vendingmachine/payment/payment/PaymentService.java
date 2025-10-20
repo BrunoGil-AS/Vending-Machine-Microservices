@@ -5,6 +5,7 @@ import com.vendingmachine.common.event.TransactionEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import static com.vendingmachine.payment.payment.SimulationConfig.SimulationConstants.*;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,10 +24,13 @@ public class PaymentService {
     private final PaymentTransactionRepository transactionRepository;
     private final KafkaTemplate<String, PaymentEvent> kafkaTemplate;
 
-    @Value("${payment.simulation.success-rate:0.95}")
+    @Value(PAYMENT_SIMULATION_SUCCESS_RATE)
     private double successRate;
 
-    @Value("${spring.kafka.topic.payment-events:payment-events}")
+    @Value(PAYMENT_SIMULATION_ENABLED_DEFAULT)
+    private boolean simulationEnabled;
+
+    @Value(SPRING_KAFKA_TOPIC_PAYMENT_EVENTS_DEFAULT)
     private String paymentEventsTopic;
 
     private final Random random = new Random();
@@ -96,8 +100,13 @@ public class PaymentService {
             return paidAmount != null && paidAmount.compareTo(transactionAmount) >= 0;
         } else {
             // Card payments have configurable success rate
-            // In a real system, this would validate card details
-            return random.nextDouble() < successRate;
+            // RANDOM: if simulationEnabled is true, use random success rate
+            if (simulationEnabled) {
+                return random.nextDouble() < successRate;
+            } else {
+                // When simulation is disabled, force deterministic success for card payments
+                return true;
+            }
         }
     }
 
