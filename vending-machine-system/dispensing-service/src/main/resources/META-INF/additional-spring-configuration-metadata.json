@@ -2,18 +2,45 @@
   "properties": [
     {
       "name": "dispensing.simulation.jam-probability",
-      "type": "java.lang.String",
-      "description": "A description for 'dispensing.simulation.jam-probability'"
+      "type": "java.lang.Double",
+      "description": "Probability (0.0-1.0) of a mechanical jam occurring during dispensing simulation",
+      "defaultValue": "0.002"
     },
     {
       "name": "dispensing.simulation.success-rate",
-      "type": "java.lang.String",
-      "description": "A description for 'dispensing.simulation.success-rate'"
+      "type": "java.lang.Double",
+      "description": "Probability (0.0-1.0) of successful product dispensing in simulation mode",
+      "defaultValue": "0.989"
     },
     {
       "name": "services.transaction.url",
       "type": "java.lang.String",
-      "description": "A description for 'services.transaction.url'"
+      "description": "Base URL for the transaction service endpoint",
+      "defaultValue": "http://localhost:8083"
+    },
+    {
+      "name": "dispensing.simulation.verification-success-rate",
+      "type": "java.lang.Double",
+      "description": "Probability (0.0-1.0) of successful verification after dispensing in simulation mode",
+      "defaultValue": "0.989"
+    },
+    {
+      "name": "dispensing.simulation.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Flag to enable/disable dispensing simulation mode",
+      "defaultValue": "false"
+    },
+    {
+      "name": "dispensing.simulation.delay-ms",
+      "type": "java.lang.Integer",
+      "description": "Simulated delay in milliseconds for dispensing operation",
+      "defaultValue": "2000"
+    },
+    {
+      "name": "dispensing.retry.max-attempts",
+      "type": "java.lang.Integer",
+      "description": "Maximum number of retry attempts for failed dispensing operations",
+      "defaultValue": "3"
     }
   ]
 }

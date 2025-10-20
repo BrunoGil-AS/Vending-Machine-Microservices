@@ -10,7 +10,7 @@ public class SimulationConstants {
 
 	// Property placeholders (style similar to dispensing-service)
 	public static final String PAYMENT_SIMULATION_SUCCESS_RATE = "${payment.simulation.success-rate}";
-	public static final String PAYMENT_SIMULATION_SUCCESS_RATE_DEFAULT = "${payment.simulation.success-rate:0.95}";
+	public static final String PAYMENT_SIMULATION_SUCCESS_RATE_DEFAULT = "${payment.simulation.success-rate:0.98}";
 
 	// Enable/disable payment simulation (set false to force deterministic success for card payments)
 	public static final String PAYMENT_SIMULATION_ENABLED = "${payment.simulation.enabled}";

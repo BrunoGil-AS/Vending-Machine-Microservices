@@ -3,7 +3,14 @@
     {
       "name": "payment.simulation.success-rate",
       "type": "java.lang.String",
-      "description": "A description for 'payment.simulation.success-rate'"
+      "description": "The percentage (0-100) of simulated payment transactions that will succeed. Used for testing payment flows.",
+      "defaultValue": "98"
+    },
+    {
+      "name": "payment.simulation.enabled",
+      "type": "java.lang.String",
+      "description": "Flag to enable/disable payment simulation mode. When enabled, real payment processing is bypassed with simulated responses.",
+      "defaultValue": "false"
     }
   ]
 }

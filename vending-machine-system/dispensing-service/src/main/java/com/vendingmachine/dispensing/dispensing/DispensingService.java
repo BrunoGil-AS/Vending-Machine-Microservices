@@ -28,10 +28,10 @@ public class DispensingService {
     @Value(DISPENSING_SIMULATION_JAM_PROBABILITY)
     private double jamProbability;
 
-    @Value(DISPENSING_SIMULATION_ENABLED_DEFAULT)
+    @Value(DISPENSING_SIMULATION_ENABLED)
     private boolean simulationEnabled;
 
-    @Value(DISPENSING_SIMULATION_VERIFICATION_RATE_DEFAULT)
+    @Value(DISPENSING_SIMULATION_VERIFICATION_RATE)
     private double verificationSuccessRate;
 
     @Value(SPRING_KAFKA_TOPIC_DISPENSING_EVENTS_DEFAULT)
@@ -83,46 +83,37 @@ public class DispensingService {
     }
 
     private boolean simulateDispensing(DispensingItem item) {
-        // Simulation points below introduce randomness. Marked so they can be disabled via properties.
-        // 1) Jam simulation
         if (simulationEnabled) {
+            log.debug("The value of simulationEnabled is: {}", simulationEnabled);
+            log.debug("Dispensing simulation enabled; running jam simulation with probability: {}, success rate: {} and verification rate: {}", jamProbability, successRate, verificationSuccessRate);
             // RANDOM: jam probability
             if (random.nextDouble() < jamProbability) {
                 log.warn("Dispensing jam detected for product {}", item.getProductId());
                 hardwareStatusService.reportHardwareError("product_chute", "Jam detected during dispensing");
                 return false;
             }
+            boolean dispensed = random.nextDouble() < successRate;
+            if (dispensed) {
+                // 2) Verification simulation
+                if (random.nextDouble() < verificationSuccessRate) {
+                    log.debug("Dispensing verification succeeded for product {}", item.getProductId());
+                    return true;
+                } else {
+                    log.warn("Dispensing verification failed for product {}", item.getProductId());
+                    hardwareStatusService.reportHardwareError("sensor_array", "Verification failed after dispensing");
+                    return false;
+                }
+            } else {
+                log.warn("Dispensing failed for product {} due to simulated hardware failure", item.getProductId());
+                return false;
+            }
         } else {
+            log.debug("Dispensing simulation disabled; skipping jam simulation");
             // When simulation is disabled, assume no jam occurs
             // deterministic behavior: do nothing here
         }
 
-        // 2) Dispense success simulation
-        boolean dispensed;
-        if (simulationEnabled) {
-            // RANDOM: success rate
-            dispensed = random.nextDouble() < successRate;
-        } else {
-            // Force deterministic success when simulation is disabled
-            dispensed = true;
-        }
-
-        if (dispensed) {
-            // 3) Verification simulation (95% by default) — mark and disable when needed
-            if (simulationEnabled) {
-                // RANDOM: verification (configurable)
-                boolean verified = random.nextDouble() < verificationSuccessRate;
-                if (!verified) {
-                    log.warn("Dispensing verification failed for product {}", item.getProductId());
-                    hardwareStatusService.reportHardwareError("sensor_array", "Sensor verification failed");
-                    return false;
-                }
-            } else {
-                // When simulation is disabled, verification always succeeds
-            }
-        }
-
-        return dispensed;
+        return true; // Default to success if simulation is disabled
     }
 
     private void publishDispensingEvent(DispensingOperation dispensing) {
