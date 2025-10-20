@@ -4,6 +4,7 @@ import com.vendingmachine.common.event.StockUpdateEvent;
 import com.vendingmachine.inventory.kafka.KafkaProducerService;
 import com.vendingmachine.inventory.product.Product;
 import com.vendingmachine.inventory.product.ProductRepository;
+import com.vendingmachine.inventory.product.dto.PostProductDTO;
 import com.vendingmachine.inventory.stock.Stock;
 import com.vendingmachine.inventory.stock.StockRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,6 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -43,21 +43,22 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Database is empty. Loading initial product data...");
 
         try {
-            List<ProductData> initialProducts = getInitialProducts();
+            List<PostProductDTO> initialProducts = getInitialProducts();
             int loaded = 0;
 
-            for (ProductData data : initialProducts) {
+            for (PostProductDTO data : initialProducts) {
                 Product product = Product.builder()
-                        .name(data.name)
-                        .price(data.price.doubleValue())
-                        .description(data.description)
+                        .name(data.getName())
+                        .price(data.getPrice())
+                        .description(data.getDescription())
                         .build();
 
                 product = productRepository.save(product);
 
                 Stock stock = Stock.builder()
                         .product(product)
-                        .quantity(data.stockQuantity)
+                        .quantity(data.getQuantity())
+                        .minThreshold(data.getMinThreshold())
                         .build();
 
                 stockRepository.save(stock);
@@ -85,34 +86,80 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
 
-    private List<ProductData> getInitialProducts() {
-        List<ProductData> products = new ArrayList<>();
+    private List<PostProductDTO> getInitialProducts() {
+        List<PostProductDTO> products = new ArrayList<>();
 
-        products.add(new ProductData("Coca Cola", new BigDecimal("1.50"), "Refreshing cola beverage 330ml", 15));
-        products.add(new ProductData("Pepsi", new BigDecimal("1.50"), "Classic cola drink 330ml", 12));
-        products.add(new ProductData("Sprite", new BigDecimal("1.50"), "Lemon-lime flavored soda 330ml", 18));
-        products.add(new ProductData("Water", new BigDecimal("1.00"), "Pure mineral water 500ml", 20));
-        products.add(new ProductData("Orange Juice", new BigDecimal("2.00"), "Fresh orange juice 250ml", 10));
-        products.add(new ProductData("Coffee", new BigDecimal("2.50"), "Hot brewed coffee 200ml", 8));
-        products.add(new ProductData("Green Tea", new BigDecimal("1.75"), "Unsweetened green tea 330ml", 14));
-        products.add(new ProductData("Chocolate Bar", new BigDecimal("1.25"), "Milk chocolate bar 50g", 25));
-        products.add(new ProductData("Chips", new BigDecimal("1.50"), "Crispy potato chips 100g", 16));
-        products.add(new ProductData("Energy Drink", new BigDecimal("2.75"), "Energy boost drink 250ml", 11));
+        products.add(PostProductDTO.builder()
+                .name("Coca Cola")
+                .price(1.50)
+                .description("Refreshing cola beverage 330ml")
+                .quantity(15)
+                .minThreshold(5)
+                .build());
+        products.add(PostProductDTO.builder()
+                .name("Pepsi")
+                .price(1.50)
+                .description("Classic cola drink 330ml")
+                .quantity(12)
+                .minThreshold(5)
+                .build());
+        products.add(PostProductDTO.builder()
+                .name("Sprite")
+                .price(1.50)
+                .description("Lemon-lime flavored soda 330ml")
+                .quantity(18)
+                .minThreshold(5)
+                .build());
+        products.add(PostProductDTO.builder()
+                .name("Water")
+                .price(1.00)
+                .description("Pure mineral water 500ml")
+                .quantity(20)
+                .minThreshold(5)
+                .build());
+        products.add(PostProductDTO.builder()
+                .name("Orange Juice")
+                .price(2.00)
+                .description("Fresh orange juice 250ml")
+                .quantity(10)
+                .minThreshold(5)
+                .build());
+        products.add(PostProductDTO.builder()
+                .name("Coffee")
+                .price(2.50)
+                .description("Hot brewed coffee 200ml")
+                .quantity(8)
+                .minThreshold(5)
+                .build());
+        products.add(PostProductDTO.builder()
+                .name("Green Tea")
+                .price(1.75)
+                .description("Unsweetened green tea 330ml")
+                .quantity(14)
+                .minThreshold(5)
+                .build());
+        products.add(PostProductDTO.builder()
+                .name("Chocolate Bar")
+                .price(1.25)
+                .description("Milk chocolate bar 50g")
+                .quantity(25)
+                .minThreshold(5)
+                .build());
+        products.add(PostProductDTO.builder()
+                .name("Chips")
+                .price(1.50)
+                .description("Crispy potato chips 100g")
+                .quantity(16)
+                .minThreshold(5)
+                .build());
+        products.add(PostProductDTO.builder()
+                .name("Energy Drink")
+                .price(2.75)
+                .description("Energy boost drink 250ml")
+                .quantity(11)
+                .minThreshold(5)
+                .build());
 
         return products;
-    }
-
-    private static class ProductData {
-        String name;
-        BigDecimal price;
-        String description;
-        int stockQuantity;
-
-        ProductData(String name, BigDecimal price, String description, int stockQuantity) {
-            this.name = name;
-            this.price = price;
-            this.description = description;
-            this.stockQuantity = stockQuantity;
-        }
     }
 }

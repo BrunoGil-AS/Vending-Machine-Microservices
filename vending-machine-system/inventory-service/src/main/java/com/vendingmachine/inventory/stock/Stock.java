@@ -26,6 +26,8 @@ public class Stock {
     @JoinColumn(name = "product_id", referencedColumnName = "id")
     private Product product;
 
+    @Column(nullable = false)
     private Integer quantity;
+    @Column(nullable = false)
     private Integer minThreshold;
 }

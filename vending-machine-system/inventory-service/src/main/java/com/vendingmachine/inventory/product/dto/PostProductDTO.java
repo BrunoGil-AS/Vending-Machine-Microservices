@@ -10,5 +10,5 @@ public class PostProductDTO {
     private Double price;
     private String description;
     private Integer quantity; // Initial quantity for stock
-
+    private Integer minThreshold; // Minimum threshold for stock alerts
 }

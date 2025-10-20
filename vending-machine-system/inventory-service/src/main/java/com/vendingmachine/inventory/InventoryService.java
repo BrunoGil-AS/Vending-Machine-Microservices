@@ -62,7 +62,7 @@ public class InventoryService {
         Stock stock = Stock.builder()
                     .product(newProduct)
                     .quantity(product.getQuantity())
-                    .minThreshold(10)
+                    .minThreshold(product.getMinThreshold())
                     .build();
         newProduct.setStock(stock);
         productRepository.save(newProduct);
@@ -126,6 +126,9 @@ public class InventoryService {
         logger.info("Updating stock for product ID: {}, quantity change: {}", productId, quantity);
         Stock existingStock = stockRepository.findByProductId(productId)
                 .orElseThrow(() -> new RuntimeException("Stock not found for product id: " + productId));
+        if (existingStock.getMinThreshold() == null) {
+            existingStock.setMinThreshold(5); // Default value for existing stocks
+        }
         int previousQuantity = existingStock.getQuantity();
         existingStock.setQuantity(existingStock.getQuantity() + quantity);
         Stock updatedStock = stockRepository.save(existingStock);
@@ -191,6 +194,9 @@ public class InventoryService {
                    productId, stock.getQuantity(), stock.getMinThreshold());
         Stock existingStock = stockRepository.findByProductId(productId)
                 .orElseThrow(() -> new RuntimeException("Stock not found for product id: " + productId));
+        if (existingStock.getMinThreshold() == null) {
+            existingStock.setMinThreshold(5); // Default value for existing stocks
+        }
         int previousQuantity = existingStock.getQuantity();
         existingStock.setQuantity(stock.getQuantity());
         existingStock.setMinThreshold(stock.getMinThreshold());

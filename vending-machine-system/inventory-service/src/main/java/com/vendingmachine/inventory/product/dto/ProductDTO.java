@@ -11,7 +11,6 @@ public class ProductDTO {
     private Double price;
     private String description;
     private Integer quantity; // From Stock entity
-
-    
+    private Integer minThreshold; // From Stock entity
 }
 
