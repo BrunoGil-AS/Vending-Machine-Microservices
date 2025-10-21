@@ -277,7 +277,7 @@ Hardware_Status: id, slot_number, status, last_check, error_details
 
 yaml
 
-# docker-compose.yml for local development
+## docker-compose.yml for local development
 
 services:
 postgres: 5432
