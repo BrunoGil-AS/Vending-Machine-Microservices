@@ -14,53 +14,75 @@
 ## Service Context Diagram
 
 ```mermaid
-graph TB
-    subgraph "External Clients"
-        CUSTOMER[Customer/End User]
-        ADMIN[Administrator]
-    end
-
-    subgraph "API Gateway - Port 8080<br/>Entry Point & Security"
-        AUTH_FILTER[JWT Authentication Filter]
-        AUTHZ_FILTER[Authorization Filter]
-        ROUTER[Route Configuration]
-        USER_SERVICE[User Service<br/>Auth Logic]
-        USER_REPO[User Repository]
-    end
-
-    subgraph "Microservices (Eureka Registered)"
-        INVENTORY[Inventory Service<br/>8081]
-        PAYMENT[Payment Service<br/>8082]
-        TRANSACTION[Transaction Service<br/>8083]
-        DISPENSING[Dispensing Service<br/>8084]
-        NOTIFICATION[Notification Service<br/>8085]
-    end
-
-    subgraph "Infrastructure"
-        EUREKA[Eureka Server<br/>8761]
-        DB[(MySQL<br/>vending_auth)]
-    end
-
-    CUSTOMER -->|HTTP Request| AUTH_FILTER
-    ADMIN -->|HTTP Request| AUTH_FILTER
-
-    AUTH_FILTER --> USER_SERVICE
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  layout: elk
+  look: neo
+title: 'API Gateway: Service Context Diagram'
+---
+flowchart TB
+ subgraph subGraph0["External Clients"]
+        CUSTOMER["Customer/End User"]
+        ADMIN["Administrator"]
+  end
+ subgraph subGraph1["API Gateway - Port 8080<br>Entry Point &amp; Security"]
+        AUTH_FILTER["JWT Authentication Filter"]
+        AUTHZ_FILTER["Authorization Filter"]
+        ROUTER["Route Configuration"]
+        USER_SERVICE["User Service<br>Auth Logic"]
+        USER_REPO["User Repository"]
+  end
+ subgraph subGraph2["Microservices (Eureka Registered)"]
+        INVENTORY["Inventory Service<br>8081"]
+        PAYMENT["Payment Service<br>8082"]
+        TRANSACTION["Transaction Service<br>8083"]
+        DISPENSING["Dispensing Service<br>8084"]
+        NOTIFICATION["Notification Service<br>8085"]
+  end
+ subgraph Infrastructure["Infrastructure"]
+        EUREKA["Eureka Server<br>8761"]
+        DB[("MySQL<br>vending_auth")]
+  end
+    CUSTOMER -- HTTP Request --> AUTH_FILTER
+    ADMIN -- HTTP Request --> AUTH_FILTER
+    AUTH_FILTER --> USER_SERVICE & AUTHZ_FILTER
     USER_SERVICE --> USER_REPO
     USER_REPO <--> DB
-
-    AUTH_FILTER --> AUTHZ_FILTER
     AUTHZ_FILTER --> ROUTER
-
-    ROUTER -->|Route /inventory/**| INVENTORY
-    ROUTER -->|Route /payment/**| PAYMENT
-    ROUTER -->|Route /transaction/**| TRANSACTION
-    ROUTER -->|Route /dispensing/**| DISPENSING
-    ROUTER -->|Route /notification/**| NOTIFICATION
-
+    ROUTER -- Route /inventory/** --> INVENTORY
+    ROUTER -- Route /payment/** --> PAYMENT
+    ROUTER -- Route /transaction/** --> TRANSACTION
+    ROUTER -- Route /dispensing/** --> DISPENSING
+    ROUTER -- Route /notification/** --> NOTIFICATION
     ROUTER --> EUREKA
+     CUSTOMER:::Sky
+     ADMIN:::Sky
+     AUTH_FILTER:::Sky
+     AUTHZ_FILTER:::Sky
+     ROUTER:::Sky
+     USER_SERVICE:::Sky
+     USER_REPO:::Sky
+     INVENTORY:::Sky
+     PAYMENT:::Sky
+     TRANSACTION:::Sky
+     DISPENSING:::Sky
+     NOTIFICATION:::Sky
+     EUREKA:::Sky
+     DB:::Sky
 
+    classDef Sky stroke-width:1px, stroke-dasharray:none, stroke:#374D7C, fill:#E2EBFF, color:#374D7C
     style AUTH_FILTER fill:#ffccbc
     style AUTHZ_FILTER fill:#ffccbc
+
 ```
 
 ---
@@ -68,65 +90,81 @@ graph TB
 ## Component Diagram
 
 ```mermaid
-graph TB
-    subgraph "Gateway Filter Chain"
-        PRE_FILTER[Pre-Filters<br/>Logging, CORS]
-        AUTH_FILTER[JWT Auth Filter]
-        AUTHZ_FILTER[Authorization Filter]
-        POST_FILTER[Post-Filters<br/>Response Headers]
-    end
-
-    subgraph "Authentication Module"
-        USER_SERVICE[User Service]
-        JWT_UTIL[JWT Token Util<br/>8hr Expiry]
-        PASSWORD_ENCODER[BCrypt Password Encoder]
-    end
-
-    subgraph "Authorization Module"
-        ROLE_CHECKER[Role-Based Access Control]
-        PERMISSION_VALIDATOR[Permission Validator]
-    end
-
-    subgraph "Routing Module"
-        ROUTE_CONFIG[Route Configuration]
-        LOAD_BALANCER[Load Balancer]
-        EUREKA_CLIENT[Eureka Client]
-    end
-
-    subgraph "User Management"
-        USER_CONTROLLER[User Controller<br/>CRUD Operations]
-        USER_REPO[User Repository]
-    end
-
-    subgraph "Domain Model"
-        USER[User Entity<br/>Username, Password, Role]
-        ROLE[Role Enum<br/>SUPER_ADMIN, ADMIN]
-    end
-
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  layout: dagre
+  look: neo
+title: 'API Gateway: Component Diagram'
+---
+flowchart TB
+ subgraph subGraph0["Gateway Filter Chain"]
+        PRE_FILTER["Pre-Filters<br>Logging, CORS"]
+        AUTH_FILTER["JWT Auth Filter"]
+        AUTHZ_FILTER["Authorization Filter"]
+        POST_FILTER["Post-Filters<br>Response Headers"]
+  end
+ subgraph subGraph1["Authentication Module"]
+        USER_SERVICE["User Service"]
+        JWT_UTIL["JWT Token Util<br>8hr Expiry"]
+        PASSWORD_ENCODER["BCrypt Password Encoder"]
+  end
+ subgraph subGraph2["Authorization Module"]
+        ROLE_CHECKER["Role-Based Access Control"]
+        PERMISSION_VALIDATOR["Permission Validator"]
+  end
+ subgraph subGraph3["Routing Module"]
+        ROUTE_CONFIG["Route Configuration"]
+        LOAD_BALANCER["Load Balancer"]
+        EUREKA_CLIENT["Eureka Client"]
+  end
+ subgraph subGraph4["User Management"]
+        USER_CONTROLLER["User Controller<br>CRUD Operations"]
+        USER_REPO["User Repository"]
+  end
+ subgraph subGraph5["Domain Model"]
+        USER["User Entity<br>Username, Password, Role"]
+        ROLE["Role Enum<br>SUPER_ADMIN, ADMIN"]
+  end
     PRE_FILTER --> AUTH_FILTER
-    AUTH_FILTER --> USER_SERVICE
-    AUTH_FILTER --> JWT_UTIL
-
-    USER_SERVICE --> PASSWORD_ENCODER
-    USER_SERVICE --> USER_REPO
-
-    AUTH_FILTER --> AUTHZ_FILTER
-    AUTHZ_FILTER --> ROLE_CHECKER
+    AUTH_FILTER --> USER_SERVICE & JWT_UTIL & AUTHZ_FILTER
+    USER_SERVICE --> PASSWORD_ENCODER & USER_REPO
+    AUTHZ_FILTER --> ROLE_CHECKER & ROUTE_CONFIG
     ROLE_CHECKER --> PERMISSION_VALIDATOR
-
-    AUTHZ_FILTER --> ROUTE_CONFIG
-    ROUTE_CONFIG --> LOAD_BALANCER
+    ROUTE_CONFIG --> LOAD_BALANCER & POST_FILTER
     LOAD_BALANCER --> EUREKA_CLIENT
-
-    ROUTE_CONFIG --> POST_FILTER
-
     USER_CONTROLLER --> USER_SERVICE
     USER_REPO <--> USER
     USER --> ROLE
-
+     PRE_FILTER:::Sky
+     AUTH_FILTER:::Sky
+     AUTHZ_FILTER:::Sky
+     POST_FILTER:::Sky
+     USER_SERVICE:::Sky
+     JWT_UTIL:::Sky
+     PASSWORD_ENCODER:::Sky
+     ROLE_CHECKER:::Sky
+     PERMISSION_VALIDATOR:::Sky
+     ROUTE_CONFIG:::Sky
+     LOAD_BALANCER:::Sky
+     EUREKA_CLIENT:::Sky
+     USER_CONTROLLER:::Sky
+     USER_REPO:::Sky
+     USER:::Sky
+     ROLE:::Sky
+    classDef Sky stroke-width:1px, stroke-dasharray:none, stroke:#374D7C, fill:#E2EBFF, color:#374D7C
     style AUTH_FILTER fill:#ffccbc
     style AUTHZ_FILTER fill:#ffccbc
     style JWT_UTIL fill:#fff9c4
+
 ```
 
 ---
@@ -134,6 +172,20 @@ graph TB
 ## Authentication Flow
 
 ```mermaid
+---
+title: "APi Gateway:Authentication Flow"
+displayMode: compact
+config:
+  theme: 'base'
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#fff'
+---
 sequenceDiagram
     autonumber
     actor User
@@ -237,6 +289,20 @@ Routes:
 ## Entity Relationship Diagram
 
 ```mermaid
+---
+title: "APi Gateway: Entity Relationship Diagram"
+displayMode: compact
+config:
+  theme: 'base'
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#fff'
+---
 erDiagram
     USERS {
         BIGINT id PK "Auto-increment"
@@ -274,47 +340,54 @@ VALUES ('admin', '$2a$10$...', 'SUPER_ADMIN');
 ### User Registration (SUPER_ADMIN Only)
 
 ```mermaid
+---
+title: "APi Gateway:Token Expiration Handling"
+displayMode: compact
+config:
+  theme: default
+  primaryColor: "#61ac61ff"
+---
 sequenceDiagram
     autonumber
-    actor SuperAdmin
+    actor User
     participant Gateway
-    participant UserController
-    participant UserService
-    participant PasswordEncoder
-    participant UserRepo
-    participant DB
+    participant AuthFilter
+    participant JwtUtil
 
-    SuperAdmin->>Gateway: POST /auth/register<br/>Header: Authorization: Bearer {token}
-    Gateway->>Gateway: Validate JWT<br/>Check SUPER_ADMIN role
+    Note over User: Token issued 9 hours ago (expired)
 
-    alt SUPER_ADMIN
-        Gateway->>UserController: register(request)
-        UserController->>UserService: createUser(dto)
+    User->>Gateway: GET /api/admin/inventory/products<br/>Authorization: Bearer {expired_token}
+    Gateway->>AuthFilter: Extract token
 
-        UserService->>UserRepo: existsByUsername(username)
-        UserRepo-->>UserService: false
+    AuthFilter->>JwtUtil: validateToken(token)
+    JwtUtil->>JwtUtil: Check expiration<br/>exp claim < current time
+    JwtUtil-->>AuthFilter: ExpiredJwtException
 
-        UserService->>PasswordEncoder: encode(password)
-        PasswordEncoder-->>UserService: BCrypt hash
+    AuthFilter-->>Gateway: Token expired
+    Gateway-->>User: 401 Unauthorized<br/>"JWT token expired"
 
-        UserService->>UserRepo: save(user)
-        UserRepo->>DB: INSERT
-        DB-->>UserRepo: User entity
-
-        UserRepo-->>UserService: Saved user
-        UserService-->>UserController: UserDTO
-        UserController-->>Gateway: 201 Created
-        Gateway-->>SuperAdmin: User created
-    else Not SUPER_ADMIN
-        Gateway-->>SuperAdmin: 403 Forbidden
-    end
+    Note over User: User must login again
 ```
 
 ### Failed Authentication
 
 ```mermaid
+---
+title: "APi Gateway:Failed Authentication"
+displayMode: compact
+config:
+  theme: 'base'
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#fff'
+---
 sequenceDiagram
-    autonumber
+    autoNumber
     actor User
     participant Gateway
     participant UserService
@@ -340,6 +413,20 @@ sequenceDiagram
 ### Token Expiration Handling
 
 ```mermaid
+---
+title: "APi Gateway:Token Expiration Handling"
+displayMode: compact
+config:
+  theme: 'base'
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#fff'
+---
 sequenceDiagram
     autonumber
     actor User

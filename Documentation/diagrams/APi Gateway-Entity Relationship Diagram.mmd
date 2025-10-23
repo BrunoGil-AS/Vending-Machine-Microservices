@@ -1,0 +1,15 @@
+---
+title: "APi Gateway: Entity Relationship Diagram"
+displayMode: compact
+config:
+  theme: light
+---
+erDiagram
+    USERS {
+        BIGINT id PK "Auto-increment"
+        VARCHAR(50) username UK "Unique username"
+        VARCHAR(255) password "BCrypt hashed"
+        VARCHAR(20) role "SUPER_ADMIN, ADMIN"
+        TIMESTAMP created_at "Registration time"
+        TIMESTAMP updated_at "Update time"
+    }
