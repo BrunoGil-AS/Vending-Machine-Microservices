@@ -16,6 +16,20 @@
 Transaction Service as the central orchestrator coordinating the entire purchase flow.
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Transaction Service: Service Context Diagram'
+---
 graph TB
     subgraph "External Services"
         GATEWAY[API Gateway<br/>Port 8080]
@@ -75,6 +89,20 @@ graph TB
 ## Component Diagram
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Transaction Service: Component Diagram'
+---
 graph TB
     subgraph "Presentation Layer"
         PUBLIC_API[Public API<br/>/api/transaction/purchase]
@@ -140,6 +168,20 @@ graph TB
 Transaction Service implements orchestration-based SAGA for distributed transaction management.
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Transaction Service: SAGA Orchestration Pattern'
+---
 stateDiagram-v2
     [*] --> CREATED: Purchase Request
 
@@ -200,6 +242,20 @@ stateDiagram-v2
 ## Entity Relationship Diagram
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Transaction Service: Entity Relationship Diagram'
+---
 erDiagram
     TRANSACTIONS ||--o{ TRANSACTION_ITEMS : contains
     TRANSACTION_ITEMS }o--|| TRANSACTIONS : "belongs to"
@@ -247,6 +303,20 @@ CREATED → PAYMENT_PROCESSING → DISPENSING → COMPLETED
 ## Kafka Topic Flow
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Transaction Service: Kafka Topic Flow'
+---
 graph TB
     subgraph "Transaction Service"
         TRANS_SERVICE[Transaction Service]
@@ -289,6 +359,20 @@ graph TB
 ### Successful Purchase Flow
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Transaction Service: Successful Purchase Flow'
+---
 sequenceDiagram
     autonumber
     actor Customer
@@ -332,6 +416,20 @@ sequenceDiagram
 ### Payment Failure Flow with Compensation
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Transaction Service: Payment Failure with Compensation'
+---
 sequenceDiagram
     autonumber
     actor Customer
@@ -363,6 +461,20 @@ sequenceDiagram
 ### Dispensing Failure with Compensation
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Transaction Service: Dispensing Failure with Compensation'
+---
 sequenceDiagram
     autonumber
     participant Service as Transaction Service

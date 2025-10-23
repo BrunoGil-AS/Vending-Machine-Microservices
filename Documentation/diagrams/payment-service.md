@@ -16,6 +16,20 @@
 Shows how Payment Service interacts with other system components.
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Payment Service: Service Context Diagram'
+---
 graph TB
     subgraph "External Services"
         GATEWAY[API Gateway<br/>Port 8080]
@@ -74,6 +88,20 @@ graph TB
 Internal architecture showing all components and their relationships.
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Payment Service: Component Diagram'
+---
 graph TB
     subgraph "Presentation Layer"
         PUBLIC_API[Public API<br/>/api/payment/*]
@@ -136,6 +164,20 @@ Flow of data through the Payment Service for key operations.
 ### DFD Level 0 - Context Level
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Payment Service: DFD Level 0'
+---
 graph LR
     CUSTOMER[Customer]
     ADMIN[Administrator]
@@ -158,6 +200,20 @@ graph LR
 ### DFD Level 1 - Detailed Processes
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Payment Service: DFD Level 1'
+---
 graph TB
     subgraph "Inputs"
         INPUT1[Payment Request]
@@ -216,6 +272,20 @@ graph TB
 Database schema for Payment Service (vending_payment database).
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Payment Service: Entity Relationship Diagram'
+---
 erDiagram
     PAYMENT_TRANSACTIONS {
         BIGINT id PK "Auto-increment"
@@ -264,6 +334,20 @@ erDiagram
 Payment Service's interaction with Kafka topics.
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Payment Service: Kafka Topic Flow'
+---
 graph TB
     subgraph "Payment Service"
         PAYMENT_SERVICE[Payment Service]
@@ -391,6 +475,20 @@ graph TB
 ### Cash Payment Processing Flow
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Payment Service: Cash Payment Processing Flow'
+---
 sequenceDiagram
     autonumber
     participant Transaction as Transaction Service
@@ -429,6 +527,20 @@ sequenceDiagram
 ### Card Payment Processing Flow
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Payment Service: Card Payment Processing Flow'
+---
 sequenceDiagram
     autonumber
     participant Transaction as Transaction Service
@@ -468,6 +580,20 @@ sequenceDiagram
 ### Event-Driven Payment Initiation
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Payment Service: Event-Driven Payment Initiation'
+---
 sequenceDiagram
     autonumber
     participant Transaction as Transaction Service
@@ -611,6 +737,20 @@ sequenceDiagram
 ### Success Rates (Configurable)
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Payment Service: Success Rates (Configurable)'
+---
 graph TB
     START[Payment Request] --> METHOD{Payment Method?}
 

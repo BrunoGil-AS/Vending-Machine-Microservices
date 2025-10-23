@@ -14,6 +14,20 @@
 ## Service Context Diagram
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Notification Service: Service Context Diagram'
+---
 graph TB
     subgraph "External Services"
         API_GATEWAY[API Gateway<br/>Port 8080]
@@ -53,6 +67,20 @@ graph TB
 ## Component Diagram
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Notification Service: Component Diagram'
+---
 graph TB
     subgraph "API Layer"
         ADMIN_API[Admin API<br/>/api/admin/notifications/*]
@@ -110,6 +138,20 @@ graph TB
 ## Event Aggregation Flow
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Notification Service: Event Aggregation Flow'
+---
 flowchart TD
     START([Event Received from Kafka]) --> DEDUPE{Already Processed?}
     DEDUPE -->|Yes| SKIP[Skip duplicate event]
@@ -161,6 +203,20 @@ flowchart TD
 ## Entity Relationship Diagram
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Notification Service: Entity Relationship Diagram'
+---
 erDiagram
     NOTIFICATIONS {
         BIGINT id PK "Auto-increment"
@@ -186,6 +242,20 @@ erDiagram
 ## Kafka Topic Flow
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Notification Service: Kafka Topic Flow'
+---
 graph TB
     subgraph "Kafka Topics (All 5)"
         TRANS_TOPIC[transaction-events]
@@ -226,6 +296,20 @@ graph TB
 ### Critical Alert Processing
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Notification Service: Critical Alert Processing'
+---
 sequenceDiagram
     autonumber
     participant Kafka
@@ -255,6 +339,20 @@ sequenceDiagram
 ### Admin Dashboard Query
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Notification Service: Admin Dashboard Query'
+---
 sequenceDiagram
     autonumber
     actor Admin
@@ -280,6 +378,20 @@ sequenceDiagram
 ### Alert Acknowledgment
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Notification Service: Alert Acknowledgment'
+---
 sequenceDiagram
     autonumber
     actor Admin

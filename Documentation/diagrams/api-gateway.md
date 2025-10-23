@@ -82,7 +82,6 @@ flowchart TB
     classDef Sky stroke-width:1px, stroke-dasharray:none, stroke:#374D7C, fill:#E2EBFF, color:#374D7C
     style AUTH_FILTER fill:#ffccbc
     style AUTHZ_FILTER fill:#ffccbc
-
 ```
 
 ---
@@ -173,10 +172,8 @@ flowchart TB
 
 ```mermaid
 ---
-title: "APi Gateway:Authentication Flow"
-displayMode: compact
 config:
-  theme: 'base'
+  theme: base
   themeVariables:
     primaryColor: '#a39cd1ff'
     primaryTextColor: '#000000'
@@ -184,7 +181,9 @@ config:
     primaryBorderColor: '#000000'
     lineColor: '#000000ff'
     secondaryColor: '#90b590ff'
-    tertiaryColor: '#fff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'API Gateway: Authentication Flow'
 ---
 sequenceDiagram
     autonumber
@@ -290,10 +289,8 @@ Routes:
 
 ```mermaid
 ---
-title: "APi Gateway: Entity Relationship Diagram"
-displayMode: compact
 config:
-  theme: 'base'
+  theme: base
   themeVariables:
     primaryColor: '#a39cd1ff'
     primaryTextColor: '#000000'
@@ -301,7 +298,9 @@ config:
     primaryBorderColor: '#000000'
     lineColor: '#000000ff'
     secondaryColor: '#90b590ff'
-    tertiaryColor: '#fff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'API Gateway: Entity Relationship Diagram'
 ---
 erDiagram
     USERS {
@@ -341,11 +340,18 @@ VALUES ('admin', '$2a$10$...', 'SUPER_ADMIN');
 
 ```mermaid
 ---
-title: "APi Gateway:Token Expiration Handling"
-displayMode: compact
 config:
-  theme: default
-  primaryColor: "#61ac61ff"
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'API Gateway: User Registration'
 ---
 sequenceDiagram
     autonumber
@@ -373,10 +379,8 @@ sequenceDiagram
 
 ```mermaid
 ---
-title: "APi Gateway:Failed Authentication"
-displayMode: compact
 config:
-  theme: 'base'
+  theme: base
   themeVariables:
     primaryColor: '#a39cd1ff'
     primaryTextColor: '#000000'
@@ -384,7 +388,9 @@ config:
     primaryBorderColor: '#000000'
     lineColor: '#000000ff'
     secondaryColor: '#90b590ff'
-    tertiaryColor: '#fff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'API Gateway: Failed Authentication'
 ---
 sequenceDiagram
     autoNumber
@@ -414,10 +420,8 @@ sequenceDiagram
 
 ```mermaid
 ---
-title: "APi Gateway:Token Expiration Handling"
-displayMode: compact
 config:
-  theme: 'base'
+  theme: base
   themeVariables:
     primaryColor: '#a39cd1ff'
     primaryTextColor: '#000000'
@@ -425,7 +429,9 @@ config:
     primaryBorderColor: '#000000'
     lineColor: '#000000ff'
     secondaryColor: '#90b590ff'
-    tertiaryColor: '#fff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'API Gateway: Token Expiration Handling'
 ---
 sequenceDiagram
     autonumber

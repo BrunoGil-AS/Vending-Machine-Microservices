@@ -14,6 +14,20 @@
 ## Service Context Diagram
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Dispensing Service: Service Context Diagram'
+---
 graph TB
     subgraph "External Services"
         TRANSACTION[Transaction Service<br/>Port 8083]
@@ -58,6 +72,20 @@ graph TB
 ## Component Diagram
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Dispensing Service: Component Diagram'
+---
 graph TB
     subgraph "API Layer"
         PUBLIC_API[Public API<br/>/api/dispensing/dispense]
@@ -116,6 +144,20 @@ graph TB
 ## Hardware Simulation Logic
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Dispensing Service: Hardware Simulation Logic'
+---
 flowchart TD
     START([Dispense Request]) --> VALIDATE{Valid Request?}
     VALIDATE -->|No| ERROR1[Return Validation Error]
@@ -170,6 +212,20 @@ flowchart TD
 ## Entity Relationship Diagram
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Dispensing Service: Entity Relationship Diagram'
+---
 erDiagram
     DISPENSING_RECORDS {
         BIGINT id PK "Auto-increment"
@@ -204,6 +260,20 @@ PENDING → IN_PROGRESS → DISPENSED
 ## Kafka Topic Flow
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Dispensing Service: Kafka Topic Flow'
+---
 graph TB
     subgraph "Dispensing Service"
         DISP_SERVICE[Dispensing Service]
@@ -243,6 +313,20 @@ graph TB
 ### Successful Dispensing Flow
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Dispensing Service: Successful Dispensing Flow'
+---
 sequenceDiagram
     autonumber
     actor Transaction as Transaction Service
@@ -279,6 +363,20 @@ sequenceDiagram
 ### Hardware Fault Flow
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Dispensing Service: Hardware Fault Flow'
+---
 sequenceDiagram
     autonumber
     participant Service as Dispensing Service
@@ -301,6 +399,20 @@ sequenceDiagram
 ### Product Jam Recovery
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Dispensing Service: Product Jam Recovery'
+---
 sequenceDiagram
     autonumber
     participant Service as Dispensing Service

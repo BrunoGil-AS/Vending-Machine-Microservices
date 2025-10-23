@@ -15,6 +15,20 @@
 This diagram shows the high-level system architecture with all services and external dependencies.
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'System Overview: System Context Diagram'
+---
 graph TB
     subgraph "External Actors"
         CUSTOMER[Customer/User]
@@ -106,6 +120,20 @@ graph TB
 Complete sequence diagram showing a successful purchase transaction from customer request to item dispensing.
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'System Overview: Purchase Flow Sequence'
+---
 sequenceDiagram
     autonumber
     actor Customer
@@ -172,6 +200,20 @@ sequenceDiagram
 Detailed view of Kafka topics and their producer-consumer relationships.
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'System Overview: Kafka Topic Flow'
+---
 graph LR
     subgraph "Producers"
         TRANS_PROD[Transaction Service]
@@ -246,6 +288,20 @@ graph LR
 Local development deployment architecture showing all components and their network connections.
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'System Overview: Deployment Architecture'
+---
 graph TB
     subgraph "Developer Workstation - localhost"
         subgraph "JVM Processes - Spring Boot Applications"
@@ -351,6 +407,20 @@ graph TB
 High-level view of service communication patterns (synchronous vs asynchronous).
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'System Overview: Service Interaction Map'
+---
 graph TB
     subgraph "Client Layer"
         CLIENT[Customer/Admin<br/>Web Interface]
@@ -449,6 +519,20 @@ graph TB
 JWT-based authentication and authorization flow at API Gateway level.
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'System Overview: Authentication Flow'
+---
 sequenceDiagram
     autonumber
     actor Admin
@@ -511,6 +595,20 @@ sequenceDiagram
 Error handling and recovery patterns across services.
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'System Overview: Error Flow'
+---
 graph TD
     START[Purchase Request] --> CHECK_STOCK{Stock Available?}
 
@@ -551,6 +649,20 @@ graph TD
 ## Performance Monitoring Architecture
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'System Overview: Performance Monitoring'
+---
 graph TB
     subgraph "Application Layer"
         SERVICES[All Microservices]

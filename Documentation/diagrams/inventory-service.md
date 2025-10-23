@@ -16,6 +16,20 @@
 Shows how Inventory Service interacts with other system components.
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Inventory Service: Service Context Diagram'
+---
 graph TB
     subgraph "External Services"
         GATEWAY[API Gateway<br/>Port 8080]
@@ -71,6 +85,20 @@ graph TB
 Internal architecture showing all components and their relationships.
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Inventory Service: Component Diagram'
+---
 graph TB
     subgraph "Presentation Layer"
         PUBLIC_API[Public API<br/>/api/inventory/*]
@@ -140,6 +168,20 @@ Flow of data through the Inventory Service for key operations.
 ### DFD Level 0 - Context Level
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Inventory Service: DFD Level 0'
+---
 graph LR
     CUSTOMER[Customer]
     ADMIN[Administrator]
@@ -165,6 +207,20 @@ graph LR
 ### DFD Level 1 - Detailed Processes
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Inventory Service: DFD Level 1'
+---
 graph TB
     subgraph "Inputs"
         INPUT1[Product Request]
@@ -230,6 +286,20 @@ graph TB
 Database schema for Inventory Service (vending_inventory database).
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Inventory Service: Entity Relationship Diagram'
+---
 erDiagram
     PRODUCT ||--o| STOCK : "has one"
     STOCK }o--|| PRODUCT : "belongs to"
@@ -300,6 +370,20 @@ erDiagram
 Inventory Service's interaction with Kafka topics.
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Inventory Service: Kafka Topic Flow'
+---
 graph TB
     subgraph "Inventory Service"
         STOCK_SERVICE[Stock Service]
@@ -417,6 +501,20 @@ graph TB
 ### Stock Check and Update Flow
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Inventory Service: Stock Check and Update Flow'
+---
 sequenceDiagram
     autonumber
     participant Transaction as Transaction Service
@@ -470,6 +568,20 @@ sequenceDiagram
 ### Product Creation Flow
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Inventory Service: Product Creation Flow'
+---
 sequenceDiagram
     autonumber
     actor Admin
@@ -512,6 +624,20 @@ sequenceDiagram
 ### Low Stock Alert Flow
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Inventory Service: Low Stock Alert Flow'
+---
 sequenceDiagram
     autonumber
     participant Dispensing as Dispensing Service

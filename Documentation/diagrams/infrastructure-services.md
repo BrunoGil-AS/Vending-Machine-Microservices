@@ -13,6 +13,20 @@
 ## Overall Infrastructure Topology
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Infrastructure Services: Overall Infrastructure Topology'
+---
 graph TB
     subgraph "Configuration Management"
         CONFIG[Config Server<br/>Port 8888<br/>File-based Config]
@@ -87,6 +101,20 @@ graph TB
 ### Component Diagram
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Infrastructure Services: Config Server Component Diagram'
+---
 graph TB
     subgraph "Config Server - Port 8888"
         CONFIG_APP[Config Server Application<br/>@EnableConfigServer]
@@ -131,6 +159,20 @@ graph TB
 ### Configuration Hierarchy
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Infrastructure Services: Configuration Hierarchy'
+---
 graph LR
     subgraph "Bootstrap Phase"
         BOOT[application.properties<br/>in service]
@@ -174,6 +216,20 @@ graph LR
 ### Service Registration Flow
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Infrastructure Services: Service Registration Flow'
+---
 sequenceDiagram
     autonumber
     participant Service as Business Service
@@ -204,6 +260,20 @@ sequenceDiagram
 ### Eureka Dashboard View
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Infrastructure Services: Eureka Dashboard View'
+---
 graph TB
     subgraph "Eureka Server - http://localhost:8761"
         DASHBOARD[Eureka Dashboard<br/>Web UI]
@@ -261,6 +331,20 @@ graph TB
 ### Topic Structure
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Infrastructure Services: Kafka Topic Structure'
+---
 graph TB
     subgraph "Kafka Broker - Port 9092"
         BROKER[Kafka Broker]
@@ -361,6 +445,20 @@ public class KafkaTopicConfig {
 ### Database-per-Service Pattern
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Infrastructure Services: Database-per-Service Pattern'
+---
 graph TB
     subgraph "MySQL Server - Port 3306"
         MYSQL[MySQL Server 8.0+]
@@ -452,6 +550,20 @@ spring.datasource.hikari.max-lifetime=1800000
 ### Service Dependency Chain
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: '#a39cd1ff'
+    primaryTextColor: '#000000'
+    secondaryTextColor: '#ffffffff'
+    primaryBorderColor: '#000000'
+    lineColor: '#000000ff'
+    secondaryColor: '#90b590ff'
+    tertiaryColor: '#f9f6a1ff'
+  look: neo
+title: 'Infrastructure Services: Service Dependency Chain'
+---
 graph TB
     START([System Startup]) --> MYSQL[Start MySQL Server<br/>Port 3306]
     START --> ZOOKEEPER[Start Zookeeper<br/>Port 2181]
