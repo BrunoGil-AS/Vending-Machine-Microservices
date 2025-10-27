@@ -1,6 +1,6 @@
 # SRS Diagrams Reference
 
-**Software Requirements Specification - Vending Machine Control System**
+**Software Requirements Specification - Vending Machine Control System:**
 
 Version: 1.0  
 Date: October 23, 2025  
