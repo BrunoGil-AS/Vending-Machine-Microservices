@@ -12,11 +12,12 @@ The `admin_test.py` script provides comprehensive testing for all admin endpoint
 
 1. **User Management Tests**
 
-   - Create new admin user
+   - Create new admin user (or detect if already exists)
+   - Test login with created/existing user
    - Get all users
    - Update user information
    - Get user by ID
-   - Delete user
+   - Delete user (optional based on cleanup setting)
 
 2. **Product Management Tests**
 

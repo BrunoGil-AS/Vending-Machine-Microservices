@@ -73,52 +73,108 @@ class VendingMachineAdminTester:
         """Test user management endpoints"""
         self.print_section("USER MANAGEMENT TESTS")
         
-        # Create a new user
+        # Define test user credentials
+        test_username = f"testuser_{int(time.time())}"
+        test_password = "testpass123"
+        user_id = None
+        user_created = False
+        
+        # 1. Try to create a new user
         print("\n1. Creating new user...")
         url = f"{self.base_url}/api/auth/users"
         new_user = {
-            "username": f"testuser_{int(time.time())}",
-            "password": "testpass123",
+            "username": test_username,
+            "password": test_password,
             "role": "ADMIN"  # Changed from USER to ADMIN (valid roles: SUPER_ADMIN, ADMIN)
         }
         response = requests.post(url, json=new_user, headers=self.headers)
         self.print_response(response, "Create User")
         
-        user_id = None
         if response.status_code in [200, 201]:
             try:
                 data = response.json()
                 if 'data' in data and 'id' in data['data']:
                     user_id = data['data']['id']
-                    print(f"\n✓ User created with ID: {user_id}")
+                    user_created = True
+                    print(f"  ✓ User created with ID: {user_id}")
+            except:
+                pass
+        elif response.status_code == 400:
+            # User might already exist from previous test run
+            try:
+                error_data = response.json()
+                if 'message' in error_data and 'already exists' in error_data['message'].lower():
+                    print(f"  ℹ User already exists, will use existing user for testing")
             except:
                 pass
         
-        # Get all users
+        # 1b. Test login with created/existing user
+        print(f"\n1b. Testing login with test user '{test_username}'...")
+        login_url = f"{self.base_url}/api/auth/login"
+        login_data = {
+            "username": test_username,
+            "password": test_password
+        }
+        login_response = requests.post(login_url, json=login_data)
+        self.print_response(login_response, "Login Test User")
+        
+        if login_response.status_code == 200:
+            try:
+                login_result = login_response.json()
+                if 'data' in login_result and 'token' in login_result['data']:
+                    print(f"  ✓ Login successful! Token received.")
+                    # If we didn't get user_id from creation, try to get it from login response
+                    if not user_id and 'id' in login_result['data']:
+                        user_id = login_result['data']['id']
+                        print(f"  ✓ Retrieved user ID from login: {user_id}")
+            except:
+                pass
+        else:
+            print(f"  ✗ Login failed - test user credentials may be incorrect")
+        
+        # 2. Get all users
         print("\n2. Fetching all users...")
         url = f"{self.base_url}/api/auth/users"
         response = requests.get(url, headers=self.headers)
         self.print_response(response, "Get All Users")
         
-        # Update user if we have user_id
+        # If we still don't have user_id, try to find it in the user list
+        if not user_id and response.status_code == 200:
+            try:
+                users_data = response.json()
+                if 'data' in users_data:
+                    for user in users_data['data']:
+                        if user.get('username') == test_username:
+                            user_id = user.get('id')
+                            print(f"  ✓ Found test user in list with ID: {user_id}")
+                            break
+            except:
+                pass
+        
+        # 3. Update user if we have user_id
         if user_id:
             print(f"\n3. Updating user {user_id}...")
             url = f"{self.base_url}/api/auth/users/{user_id}"
+            updated_username = f"updated_user_{int(time.time())}"
             update_data = {
-                "username": f"updated_user_{int(time.time())}",
+                "username": updated_username,
                 "role": "ADMIN"  # Changed from USER to ADMIN (valid roles: SUPER_ADMIN, ADMIN)
             }
             response = requests.put(url, json=update_data, headers=self.headers)
             self.print_response(response, "Update User")
+            
+            # Update test_username for later operations
+            if response.status_code == 200:
+                test_username = updated_username
         
-        # Get user by ID
+        # 4. Get user by ID
         if user_id:
             print(f"\n4. Fetching user {user_id}...")
             url = f"{self.base_url}/api/auth/users/{user_id}"
             response = requests.get(url, headers=self.headers)
             self.print_response(response, "Get User by ID")
         
-        # Delete user (only if cleanup is enabled)
+        # 5. Delete user (only if cleanup is enabled)
         if cleanup:
             if user_id:
                 print(f"\n5. Deleting user {user_id}...")
@@ -128,7 +184,7 @@ class VendingMachineAdminTester:
         else:
             if user_id:
                 print(f"\n5. Skipping user deletion (cleanup disabled)")
-                print(f"  ℹ User {user_id} has been kept for inspection")
+                print(f"  ℹ User '{test_username}' (ID: {user_id}) has been kept for inspection")
     
     def test_product_management(self, cleanup: bool = True):
         """Test product management endpoints"""
