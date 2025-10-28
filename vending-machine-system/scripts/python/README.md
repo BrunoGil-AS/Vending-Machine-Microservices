@@ -54,7 +54,7 @@ python3 admin_test.py
 
 **Example Session:**
 
-```
+```plaintext
 VENDING MACHINE ADMIN TEST MENU
 ================================================================
 
@@ -108,6 +108,7 @@ ADMIN_PASSWORD = "password123"
    ```
 
 2. **Change Admin Credentials:**
+
    ```python
    ADMIN_USERNAME = "your-admin-username"
    ADMIN_PASSWORD = "your-admin-password"
@@ -164,7 +165,7 @@ pip install requests
 
 ### Example Success Output
 
-```
+```plaintext
 ============================================================
   USER MANAGEMENT TESTS
 ============================================================
@@ -257,7 +258,7 @@ python3 admin_test.py
 
 **Error:**
 
-```
+```bash
 ✗ Cannot connect to services: Connection refused
 ```
 
@@ -272,7 +273,7 @@ python3 admin_test.py
 
 **Error:**
 
-```
+```bash
 ✗ Login failed!
 ```
 
@@ -288,7 +289,7 @@ python3 admin_test.py
 
 **Error:**
 
-```
+```bash
 Status Code: 500
 Message: "Column 'min_threshold' cannot be null"
 ```
@@ -305,16 +306,18 @@ This should be fixed in the latest version. If you still see this:
 
 **Error:**
 
-```
+```bash
 Failed to convert from type [io.asyncer.r2dbc.mysql.MySqlDataRow] to type [java.lang.Boolean]
 ```
 
 **Solution:**
 
 1. Check API Gateway logs with improved logging:
+
    ```bash
    tail -f vending-machine-system/api-gateway/logs/api-gateway.log | grep "\[CREATE USER\]"
    ```
+
 2. Verify database schema is correct
 3. Restart API Gateway service
 
@@ -419,5 +422,3 @@ For issues or questions:
 3. Consult `Documentation/development_plan.md` for system architecture
 
 ---
-
-**Happy Testing! 🚀**
