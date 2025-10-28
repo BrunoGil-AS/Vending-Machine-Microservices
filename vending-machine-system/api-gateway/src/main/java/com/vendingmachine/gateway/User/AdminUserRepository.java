@@ -17,14 +17,14 @@ public interface AdminUserRepository extends R2dbcRepository<AdminUser, Long> {
     Mono<AdminUser> findByUsername(String username);
     
     /**
-     * Check if username exists
+     * Check if username exists - Returns count as Long, converted to Boolean in service
      */
-    @Query("SELECT COUNT(*) > 0 FROM admin_users WHERE username = :username")
-    Mono<Boolean> existsByUsername(String username);
+    @Query("SELECT COUNT(*) FROM admin_users WHERE username = :username")
+    Mono<Long> countByUsername(String username);
     
     /**
      * Find active user by username
      */
-    @Query("SELECT * FROM admin_users WHERE username = :username AND active = true")
+    @Query("SELECT * FROM admin_users WHERE username = :username AND active = 1")
     Mono<AdminUser> findByUsernameAndActiveTrue(String username);
 }

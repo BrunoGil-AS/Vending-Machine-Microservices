@@ -69,7 +69,7 @@ class VendingMachineAdminTester:
             print(f"\n✗ Login error: {str(e)}")
             return False
     
-    def test_user_management(self):
+    def test_user_management(self, cleanup: bool = True):
         """Test user management endpoints"""
         self.print_section("USER MANAGEMENT TESTS")
         
@@ -79,7 +79,7 @@ class VendingMachineAdminTester:
         new_user = {
             "username": f"testuser_{int(time.time())}",
             "password": "testpass123",
-            "role": "USER"
+            "role": "ADMIN"  # Changed from USER to ADMIN (valid roles: SUPER_ADMIN, ADMIN)
         }
         response = requests.post(url, json=new_user, headers=self.headers)
         self.print_response(response, "Create User")
@@ -106,7 +106,7 @@ class VendingMachineAdminTester:
             url = f"{self.base_url}/api/auth/users/{user_id}"
             update_data = {
                 "username": f"updated_user_{int(time.time())}",
-                "role": "USER"
+                "role": "ADMIN"  # Changed from USER to ADMIN (valid roles: SUPER_ADMIN, ADMIN)
             }
             response = requests.put(url, json=update_data, headers=self.headers)
             self.print_response(response, "Update User")
@@ -118,12 +118,17 @@ class VendingMachineAdminTester:
             response = requests.get(url, headers=self.headers)
             self.print_response(response, "Get User by ID")
         
-        # Delete user
-        if user_id:
-            print(f"\n5. Deleting user {user_id}...")
-            url = f"{self.base_url}/api/auth/users/{user_id}"
-            response = requests.delete(url, headers=self.headers)
-            self.print_response(response, "Delete User")
+        # Delete user (only if cleanup is enabled)
+        if cleanup:
+            if user_id:
+                print(f"\n5. Deleting user {user_id}...")
+                url = f"{self.base_url}/api/auth/users/{user_id}"
+                response = requests.delete(url, headers=self.headers)
+                self.print_response(response, "Delete User")
+        else:
+            if user_id:
+                print(f"\n5. Skipping user deletion (cleanup disabled)")
+                print(f"  ℹ User {user_id} has been kept for inspection")
     
     def test_product_management(self, cleanup: bool = True):
         """Test product management endpoints"""
@@ -144,7 +149,8 @@ class VendingMachineAdminTester:
                 "name": f"Product {i+1} - {int(time.time())}",
                 "price": round(1.0 + i * 0.5, 2),
                 "description": f"Description for product {i+1}",
-                "quantity": 10 + i
+                "quantity": 10 + i,
+                "minThreshold": 5  # Added required minThreshold field
             }
             response = requests.post(url, json=new_product, headers=self.headers)
             self.print_response(response, f"Create Product {i+1}")
@@ -175,7 +181,8 @@ class VendingMachineAdminTester:
                 "name": f"Modified Product {int(time.time())}",
                 "price": 9.99,
                 "description": "This product has been updated.",
-                "quantity": 50
+                "quantity": 50,
+                "minThreshold": 10  # Added minThreshold field
             }
             response = requests.put(url, json=updated_product, headers=self.headers)
             self.print_response(response, f"Update Product {product_to_modify_id}")
@@ -248,9 +255,9 @@ class VendingMachineAdminTester:
             print(f'curl -X POST {self.base_url}/api/auth/users -H "Content-Type: application/json" -d \'{{"username": "{ADMIN_USERNAME}", "password": "{ADMIN_PASSWORD}", "role": "SUPER_ADMIN"}}\'')
             return
         
-        # Run all test sections
+        # Run all test sections (cleanup applies to both users and products)
         time.sleep(1)
-        self.test_user_management()
+        self.test_user_management(cleanup=cleanup_products)
         
         time.sleep(1)
         self.test_product_management(cleanup=cleanup_products)
@@ -262,6 +269,94 @@ class VendingMachineAdminTester:
         self.print_section("TEST SUITE COMPLETED")
         print("\nAll admin endpoint tests have been executed.")
         print("Review the results above for any failures or issues.\n")
+    
+    def run_selected_tests(self, test_selection: list, cleanup_products: bool = True):
+        """Run only selected tests"""
+        print("\n" + "█"*60)
+        print("  VENDING MACHINE ADMIN TEST SUITE (SELECTED TESTS)")
+        print("█"*60)
+        
+        # Login
+        if not self.login(ADMIN_USERNAME, ADMIN_PASSWORD):
+            print("\n✗ Cannot proceed without successful login!")
+            print("\nMake sure the system is running and admin user exists.")
+            return
+        
+        # Run selected test sections (cleanup applies to both users and products)
+        if '1' in test_selection:
+            time.sleep(1)
+            self.test_user_management(cleanup=cleanup_products)
+        
+        if '2' in test_selection:
+            time.sleep(1)
+            self.test_product_management(cleanup=cleanup_products)
+        
+        if '3' in test_selection:
+            time.sleep(1)
+            self.test_payment_transactions()
+        
+        # Summary
+        self.print_section("TEST SUITE COMPLETED")
+        print("\nSelected admin endpoint tests have been executed.")
+        print("Review the results above for any failures or issues.\n")
+
+def show_menu():
+    """Display interactive menu"""
+    print("\n" + "="*60)
+    print("  VENDING MACHINE ADMIN TEST MENU")
+    print("="*60)
+    print("\nAvailable Test Suites:")
+    print("  1. User Management Tests")
+    print("     - Create user")
+    print("     - Get all users")
+    print("     - Update user")
+    print("     - Get user by ID")
+    print("     - Delete user")
+    print()
+    print("  2. Product Management Tests")
+    print("     - Get all products")
+    print("     - Create 11 new products")
+    print("     - Update product")
+    print("     - Delete product")
+    print("     - Verify operations")
+    print()
+    print("  3. Payment Transaction Tests")
+    print("     - Get all payment transactions")
+    print()
+    print("  0. Run ALL Tests")
+    print("  q. Quit")
+    print("="*60)
+    
+def get_user_choice():
+    """Get user's test selection"""
+    while True:
+        choice = input("\nEnter test numbers (comma-separated, e.g., 1,2) or 0 for all, q to quit: ").strip()
+        
+        if choice.lower() == 'q':
+            return None
+        
+        if choice == '0':
+            return ['1', '2', '3']
+        
+        # Parse comma-separated values
+        selections = [s.strip() for s in choice.split(',')]
+        valid_selections = [s for s in selections if s in ['1', '2', '3']]
+        
+        if valid_selections:
+            return valid_selections
+        
+        print("Invalid selection. Please enter valid test numbers (1, 2, 3), 0 for all, or q to quit.")
+    
+def ask_cleanup_preference():
+    """Ask user if they want to cleanup test products"""
+    while True:
+        choice = input("\nCleanup test products after execution? (y/n, default: y): ").strip().lower()
+        if choice == '' or choice == 'y':
+            return True
+        elif choice == 'n':
+            return False
+        else:
+            print("Invalid choice. Please enter 'y' for yes or 'n' for no.")
 
 def main():
     """Main entry point"""
@@ -269,17 +364,37 @@ def main():
     print(f"Target URL: {BASE_URL}")
     print(f"Admin User: {ADMIN_USERNAME}\n")
 
-    # Check for --no-cleanup argument
-    cleanup_products = "--no-cleanup" not in sys.argv
-    if not cleanup_products:
-        print("*** Running with --no-cleanup: Products will not be deleted after the test. ***\n")
-
+    # Check for command-line arguments for non-interactive mode
+    if len(sys.argv) > 1:
+        # Legacy support for --no-cleanup flag
+        cleanup_products = "--no-cleanup" not in sys.argv
+        if not cleanup_products:
+            print("*** Running with --no-cleanup: Products will not be deleted after the test. ***\n")
+        
+        # Check for --all flag to run all tests non-interactively
+        if "--all" in sys.argv:
+            print("*** Running in non-interactive mode: All tests will be executed ***\n")
+        else:
+            print("*** Running in non-interactive mode: All tests will be executed ***\n")
+            print("*** Use interactive mode (no args) for test selection menu ***\n")
+    else:
+        # Interactive mode
+        show_menu()
+        test_selection = get_user_choice()
+        
+        if test_selection is None:
+            print("\n👋 Exiting. No tests executed.")
+            return
+        
+        cleanup_products = ask_cleanup_preference()
+        print(f"\nCleanup preference: {'Yes' if cleanup_products else 'No'}")
+    
     # Check if services are accessible
     try:
         response = requests.get(f"{BASE_URL}/api/inventory/products", timeout=5)
-        print(f"✓ Services are accessible (Status: {response.status_code})\n")
+        print(f"\n✓ Services are accessible (Status: {response.status_code})\n")
     except Exception as e:
-        print(f"✗ Cannot connect to services: {str(e)}")
+        print(f"\n✗ Cannot connect to services: {str(e)}")
         print("\nPlease ensure:")
         print("1. All microservices are running")
         print("2. API Gateway is accessible at http://localhost:8080")
@@ -288,7 +403,13 @@ def main():
     
     # Run tests
     tester = VendingMachineAdminTester(BASE_URL)
-    tester.run_all_tests(cleanup_products=cleanup_products)
+    
+    if len(sys.argv) > 1 or 'test_selection' not in locals():
+        # Non-interactive mode or no selection made
+        tester.run_all_tests(cleanup_products=cleanup_products)
+    else:
+        # Interactive mode with selection
+        tester.run_selected_tests(test_selection, cleanup_products=cleanup_products)
 
 if __name__ == "__main__":
     main()

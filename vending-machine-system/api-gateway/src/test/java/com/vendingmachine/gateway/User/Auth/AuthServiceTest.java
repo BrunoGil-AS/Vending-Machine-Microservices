@@ -85,7 +85,7 @@ public class AuthServiceTest {
         CreateUserRequest createUserRequest = new CreateUserRequest("newuser", "password", "ADMIN");
         AdminUser newUser = AdminUser.builder().id(2L).username("newuser").role("ADMIN").build();
 
-        when(adminUserRepository.existsByUsername("newuser")).thenReturn(Mono.just(false));
+        when(adminUserRepository.countByUsername("newuser")).thenReturn(Mono.just(0L));
         when(adminUserRepository.save(any(AdminUser.class))).thenReturn(Mono.just(newUser));
 
         StepVerifier.create(authService.createUser(createUserRequest))
@@ -96,7 +96,7 @@ public class AuthServiceTest {
     @Test
     void createUser_usernameExists() {
         CreateUserRequest createUserRequest = new CreateUserRequest("admin", "password", "ADMIN");
-        when(adminUserRepository.existsByUsername("admin")).thenReturn(Mono.just(true));
+        when(adminUserRepository.countByUsername("admin")).thenReturn(Mono.just(1L));
 
         StepVerifier.create(authService.createUser(createUserRequest))
                 .expectErrorMessage("Username already exists")

@@ -122,6 +122,86 @@ public class InventoryService {
         return newProduct;
     }
 
+    public Product updateProduct(Long productId, PostProductDTO productDTO) {
+        logger.info("Updating product with ID: {}", productId);
+        
+        // Find existing product
+        Product existingProduct = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
+        
+        // Update product fields
+        existingProduct.setName(productDTO.getName());
+        existingProduct.setPrice(productDTO.getPrice());
+        existingProduct.setDescription(productDTO.getDescription());
+        
+        // Update associated stock
+        Stock existingStock = stockRepository.findByProductId(productId)
+                .orElseThrow(() -> new RuntimeException("Stock not found for product id: " + productId));
+        
+        int previousQuantity = existingStock.getQuantity();
+        existingStock.setQuantity(productDTO.getQuantity());
+        existingStock.setMinThreshold(productDTO.getMinThreshold());
+        
+        // Save both entities
+        Product updatedProduct = productRepository.save(existingProduct);
+        Stock updatedStock = stockRepository.save(existingStock);
+        
+        logger.info("Product updated successfully with ID: {}. Previous quantity: {}, New quantity: {}, Min threshold: {}",
+                   productId, previousQuantity, updatedStock.getQuantity(), updatedStock.getMinThreshold());
+
+        // Publish stock update event
+        String status = "STOCK_UPDATED";
+        if (updatedStock.getQuantity() <= 0) {
+            status = "OUT_OF_STOCK";
+            logger.warn("Product ID: {} is now out of stock", productId);
+        } else if (updatedStock.getQuantity() < updatedStock.getMinThreshold()) {
+            status = "LOW_STOCK";
+            logger.warn("Product ID: {} is below minimum threshold. Current: {}, Threshold: {}",
+                       productId, updatedStock.getQuantity(), updatedStock.getMinThreshold());
+        }
+
+        StockUpdateEvent stockEvent = new StockUpdateEvent(
+            UUID.randomUUID().toString(),
+            productId,
+            updatedStock.getQuantity(),
+            status,
+            System.currentTimeMillis()
+        );
+        kafkaProducerService.send("stock-update-events", stockEvent);
+        logger.info("Published stock update event: {}", stockEvent);
+
+        // Publish low stock alert if applicable
+        if (updatedStock.getQuantity() < updatedStock.getMinThreshold() && updatedStock.getQuantity() > 0) {
+            String alertType = "LOW_STOCK";
+            LowStockAlertEvent alertEvent = new LowStockAlertEvent(
+                UUID.randomUUID().toString(),
+                productId,
+                updatedProduct.getName(),
+                updatedStock.getQuantity(),
+                updatedStock.getMinThreshold(),
+                alertType,
+                System.currentTimeMillis()
+            );
+            kafkaProducerService.send("low-stock-alerts", alertEvent);
+            logger.info("Published low stock alert event: {}", alertEvent);
+        } else if (updatedStock.getQuantity() <= 0) {
+            String alertType = "OUT_OF_STOCK";
+            LowStockAlertEvent alertEvent = new LowStockAlertEvent(
+                UUID.randomUUID().toString(),
+                productId,
+                updatedProduct.getName(),
+                updatedStock.getQuantity(),
+                updatedStock.getMinThreshold(),
+                alertType,
+                System.currentTimeMillis()
+            );
+            kafkaProducerService.send("low-stock-alerts", alertEvent);
+            logger.warn("Published out of stock alert event: {}", alertEvent);
+        }
+
+        return updatedProduct;
+    }
+
     public Stock updateStock(Long productId, Integer quantity) {
         logger.info("Updating stock for product ID: {}, quantity change: {}", productId, quantity);
         Stock existingStock = stockRepository.findByProductId(productId)

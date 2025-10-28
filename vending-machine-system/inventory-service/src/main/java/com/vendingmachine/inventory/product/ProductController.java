@@ -66,6 +66,14 @@ public class ProductController {
         return newProduct;
     }
 
+    @PutMapping("/admin/inventory/products/{productId}")
+    public Product updateProduct(@PathVariable Long productId, @RequestBody PostProductDTO product) {
+        logger.info("Received request to update product ID: {}", productId);
+        Product updatedProduct = inventoryService.updateProduct(productId, product);
+        logger.info("Product updated successfully with ID: {}", updatedProduct.getId());
+        return updatedProduct;
+    }
+
     @PutMapping("/admin/inventory/stock/{productId}")
     public Stock updateStock(@PathVariable Long productId, @RequestBody Stock stock) {
         logger.info("Received request to update stock for product ID: {}", productId);
