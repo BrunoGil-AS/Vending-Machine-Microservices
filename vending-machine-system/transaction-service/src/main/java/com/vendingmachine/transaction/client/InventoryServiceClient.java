@@ -142,8 +142,9 @@ public class InventoryServiceClient {
             new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {}
         );
         
-        if (response.getBody() != null) {
-            Double price = (Double) response.getBody().get("price");
+        Map<String, Object> body = response.getBody();
+        if (body != null) {
+            Double price = (Double) body.get("price");
             java.math.BigDecimal result = java.math.BigDecimal.valueOf(price != null ? price : 0.0);
             log.debug("Retrieved price for product {}: {}", productId, result);
             return result;
@@ -156,6 +157,7 @@ public class InventoryServiceClient {
     /**
      * Fallback for product price retrieval failures.
      */
+    @SuppressWarnings("unused")
     private java.math.BigDecimal getProductPriceFallback(Long productId, Exception ex) {
         log.error("Failed to get price for product {}. Error: {}. Returning 0.0", 
                   productId, ex.getMessage());
