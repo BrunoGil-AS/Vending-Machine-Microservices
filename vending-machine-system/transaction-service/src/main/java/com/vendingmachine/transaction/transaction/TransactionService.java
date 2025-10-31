@@ -1,5 +1,8 @@
 package com.vendingmachine.transaction.transaction;
 
+import com.vendingmachine.transaction.client.InventoryServiceClient;
+import com.vendingmachine.transaction.client.PaymentServiceClient;
+import com.vendingmachine.transaction.client.DispensingServiceClient;
 import com.vendingmachine.transaction.transaction.dto.PurchaseRequestDTO;
 import com.vendingmachine.transaction.transaction.dto.PurchaseItemDTO;
 import com.vendingmachine.transaction.transaction.dto.TransactionDTO;
@@ -10,15 +13,8 @@ import com.vendingmachine.transaction.kafka.KafkaEventService;
 import com.vendingmachine.common.event.TransactionEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -34,13 +30,11 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final KafkaEventService kafkaEventService;
-    private final RestTemplate restTemplate;
-
-    @Value("${services.inventory.url:http://localhost:8081}")
-    private String inventoryServiceUrl;
-
-    @Value("${services.payment.url:http://localhost:8082}")
-    private String paymentServiceUrl;
+    
+    // Circuit Breaker enabled clients
+    private final InventoryServiceClient inventoryClient;
+    private final PaymentServiceClient paymentClient;
+    private final DispensingServiceClient dispensingClient;
 
     @Transactional
     public TransactionDTO purchase(PurchaseRequestDTO request) {
@@ -126,22 +120,50 @@ public class TransactionService {
         return mapToDTO(finalTransaction);
     }
 
+    /**
+     * Check inventory availability using circuit breaker enabled client
+     */
     private boolean checkInventoryAvailability(List<PurchaseItemDTO> items) {
         try {
-            String url = inventoryServiceUrl + "/api/inventory/check-availability";
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("X-Internal-Service", "transaction-service");
-            HttpEntity<List<PurchaseItemDTO>> entity = new HttpEntity<>(items, headers);
+            // Convert items to format expected by client
+            List<Map<String, Object>> itemMaps = items.stream()
+                .map(item -> Map.of(
+                    "productId", (Object) item.getProductId(),
+                    "quantity", (Object) item.getQuantity()
+                ))
+                .collect(Collectors.toList());
 
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                url, HttpMethod.POST, entity, new ParameterizedTypeReference<Map<String, Object>>() {});
-            if (response.getBody() != null) {
-                @SuppressWarnings("null")
-                Boolean available = (Boolean) response.getBody().get("available");
-                log.info("Inventory check result: {}", available);
-                return available != null && available;
+            // Use circuit breaker enabled client
+            Map<Long, Map<String, Object>> availabilityMap = inventoryClient.checkAvailability(itemMaps);
+            
+            if (availabilityMap == null || availabilityMap.isEmpty()) {
+                log.warn("No availability response received from inventory service");
+                return false;
             }
-            return false;
+
+            // Check if all items are available
+            for (PurchaseItemDTO item : items) {
+                Map<String, Object> itemStatus = availabilityMap.get(item.getProductId());
+                if (itemStatus == null) {
+                    log.warn("No availability info for product {}", item.getProductId());
+                    return false;
+                }
+
+                Boolean available = (Boolean) itemStatus.get("available");
+                if (available == null || !available) {
+                    log.warn("Product {} is not available", item.getProductId());
+                    
+                    // Check if this is a fallback response
+                    Boolean isFallback = (Boolean) itemStatus.get("fallback");
+                    if (Boolean.TRUE.equals(isFallback)) {
+                        log.error("Inventory service is unavailable (circuit breaker open)");
+                    }
+                    return false;
+                }
+            }
+
+            log.info("All {} items are available", items.size());
+            return true;
         } catch (Exception e) {
             log.error("Failed to check inventory availability", e);
             return false;
@@ -158,62 +180,55 @@ public class TransactionService {
         return total;
     }
 
+    /**
+     * Get product price using circuit breaker enabled client
+     */
     @SuppressWarnings("null")
     private BigDecimal getProductPrice(Long productId) {
         try {
-            String url = inventoryServiceUrl + "/api/inventory/products/" + productId;
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("X-Internal-Service", "transaction-service");
-            HttpEntity<?> entity = new HttpEntity<>(headers);
-
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                url, HttpMethod.GET, entity, new ParameterizedTypeReference<Map<String, Object>>() {});
-            if (response.getBody() != null) {
-                Double price = (Double) response.getBody().get("price");
-                return BigDecimal.valueOf(price != null ? price : 0.0);
-            }
-            return BigDecimal.ZERO;
+            // Use circuit breaker enabled inventory client
+            return inventoryClient.getProductPrice(productId);
         } catch (Exception e) {
             log.error("Failed to get product price for {}", productId, e);
             return BigDecimal.ZERO;
         }
     }
 
+    /**
+     * Process payment using circuit breaker enabled client
+     */
     @SuppressWarnings("null")
     private boolean processPayment(Long transactionId, PaymentInfo paymentInfo, BigDecimal amount) {
         try {
-            String url = paymentServiceUrl + "/api/payment/process";
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("X-Internal-Service", "transaction-service");
-            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            // Use circuit breaker enabled payment client
+            Map<String, Object> paymentResponse = paymentClient.processPayment(
+                transactionId.toString(), 
+                paymentInfo, 
+                amount
+            );
 
-            // Create payment request in the correct format
-            Map<String, Object> paymentRequest = new java.util.HashMap<>();
-            paymentRequest.put("transactionId", transactionId);
-            paymentRequest.put("paymentMethod", paymentInfo.getPaymentMethod().name());
-            paymentRequest.put("amount", amount);
-
-            // Add card details for card payments
-            if (paymentInfo.getPaymentMethod() != PaymentMethod.CASH) {
-                paymentRequest.put("cardNumber", paymentInfo.getCardNumber());
-                paymentRequest.put("cardHolderName", paymentInfo.getCardHolderName());
-                paymentRequest.put("expiryDate", paymentInfo.getExpiryDate());
-            } else {
-                // Add paid amount for cash payments
-                paymentRequest.put("paidAmount", paymentInfo.getPaidAmount());
+            if (paymentResponse == null) {
+                log.error("No response received from payment service");
+                return false;
             }
 
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(paymentRequest, headers);
-
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                url, HttpMethod.POST, entity, new ParameterizedTypeReference<Map<String, Object>>() {});
-            if (response.getBody() != null) {
-                String status = (String) response.getBody().get("status");
-                boolean success = "SUCCESS".equals(status);
-                log.info("Payment processing result: {} (status: {})", success, status);
-                return success;
+            // Check if this is a fallback response
+            Boolean isFallback = (Boolean) paymentResponse.get("fallback");
+            if (Boolean.TRUE.equals(isFallback)) {
+                log.error("Payment service is unavailable (circuit breaker open)");
+                return false;
             }
-            return false;
+
+            // Check payment success
+            Object successObj = paymentResponse.get("success");
+            Boolean success = successObj instanceof Boolean ? (Boolean) successObj : false;
+            
+            String status = (String) paymentResponse.get("status");
+            boolean isSuccess = success || "SUCCESS".equals(status);
+            
+            log.info("Payment processing result: {} (status: {})", isSuccess, status);
+            return isSuccess;
+            
         } catch (Exception e) {
             log.error("Failed to process payment", e);
             return false;
@@ -241,7 +256,7 @@ public class TransactionService {
 
         try {
             // Attempt to refund payment
-            boolean refundSuccess = refundPayment(transaction.getTotalAmount());
+            boolean refundSuccess = refundPayment(transactionId, transaction.getTotalAmount());
             if (refundSuccess) {
                 transaction.setStatus(TransactionStatus.CANCELLED);
                 log.info("Successfully compensated transaction {} with refund", transactionId);
@@ -270,25 +285,37 @@ public class TransactionService {
         }
     }
 
+    /**
+     * Refund payment using circuit breaker enabled client
+     */
     @SuppressWarnings("null")
-    private boolean refundPayment(BigDecimal amount) {
+    private boolean refundPayment(Long transactionId, BigDecimal amount) {
         try {
-            String url = paymentServiceUrl + "/api/payment/refund";
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("X-Internal-Service", "transaction-service");
-            Map<String, Object> refundRequest = Map.of(
-                "amount", amount
+            // Use circuit breaker enabled payment client
+            Map<String, Object> refundResponse = paymentClient.refundPayment(
+                transactionId.toString(), 
+                amount
             );
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(refundRequest, headers);
 
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                url, HttpMethod.POST, entity, new ParameterizedTypeReference<Map<String, Object>>() {});
-            if (response.getBody() != null) {
-                Boolean success = (Boolean) response.getBody().get("success");
-                log.info("Payment refund result: {}", success);
-                return success != null && success;
+            if (refundResponse == null) {
+                log.error("No response received from payment service for refund");
+                return false;
             }
-            return false;
+
+            // Check if this is a fallback response
+            Boolean isFallback = (Boolean) refundResponse.get("fallback");
+            if (Boolean.TRUE.equals(isFallback)) {
+                log.error("Payment service is unavailable for refund (circuit breaker open)");
+                return false;
+            }
+
+            // Check refund success
+            Boolean success = (Boolean) refundResponse.get("success");
+            boolean isSuccess = success != null && success;
+            
+            log.info("Payment refund result: {}", isSuccess);
+            return isSuccess;
+            
         } catch (Exception e) {
             log.error("Failed to process refund", e);
             return false;

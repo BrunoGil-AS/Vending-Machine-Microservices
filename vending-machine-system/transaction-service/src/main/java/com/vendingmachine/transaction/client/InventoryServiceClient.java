@@ -120,4 +120,45 @@ public class InventoryServiceClient {
         log.error("CRITICAL: Manual stock reconciliation required for product {}", productId);
         // In production, this should trigger an alert/notification
     }
+
+    /**
+     * Gets the price of a product.
+     * 
+     * @param productId Product ID
+     * @return Product price, or 0.0 if unavailable
+     */
+    @CircuitBreaker(name = "inventory-service", fallbackMethod = "getProductPriceFallback")
+    @Retry(name = "inventory-service")
+    public java.math.BigDecimal getProductPrice(Long productId) {
+        log.debug("Getting price for product {}", productId);
+        
+        String url = inventoryServiceUrl + "/api/inventory/products/" + productId;
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Internal-Service", "transaction-service");
+        HttpEntity<?> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+            url, HttpMethod.GET, entity, 
+            new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+        
+        if (response.getBody() != null) {
+            Double price = (Double) response.getBody().get("price");
+            java.math.BigDecimal result = java.math.BigDecimal.valueOf(price != null ? price : 0.0);
+            log.debug("Retrieved price for product {}: {}", productId, result);
+            return result;
+        }
+        
+        log.warn("No response body when getting price for product {}", productId);
+        return java.math.BigDecimal.ZERO;
+    }
+
+    /**
+     * Fallback for product price retrieval failures.
+     */
+    private java.math.BigDecimal getProductPriceFallback(Long productId, Exception ex) {
+        log.error("Failed to get price for product {}. Error: {}. Returning 0.0", 
+                  productId, ex.getMessage());
+        return java.math.BigDecimal.ZERO;
+    }
 }
