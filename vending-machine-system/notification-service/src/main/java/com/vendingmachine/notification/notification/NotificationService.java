@@ -1,5 +1,7 @@
 package com.vendingmachine.notification.notification;
 
+import com.vendingmachine.common.aop.annotation.Auditable;
+import com.vendingmachine.common.aop.annotation.ExecutionTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,8 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
 
     @Transactional
+    @Auditable(operation = "CREATE_NOTIFICATION", entityType = "Notification", logParameters = true)
+    @ExecutionTime(operation = "CREATE_NOTIFICATION", warningThreshold = 800, detailed = true)
     public Notification createNotification(NotificationType type, String message, String details,
                                          Long entityId, String entityType, String severity) {
         Notification notification = new Notification();
@@ -33,6 +37,8 @@ public class NotificationService {
     }
 
     @Transactional
+    @Auditable(operation = "MARK_NOTIFICATION_AS_READ", entityType = "Notification", logParameters = true)
+    @ExecutionTime(operation = "MARK_NOTIFICATION_AS_READ", warningThreshold = 500, detailed = true)
     public void markAsRead(Long notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notification not found"));
@@ -42,6 +48,8 @@ public class NotificationService {
     }
 
     @Transactional
+    @Auditable(operation = "ARCHIVE_NOTIFICATION", entityType = "Notification", logParameters = true)
+    @ExecutionTime(operation = "ARCHIVE_NOTIFICATION", warningThreshold = 500, detailed = true)
     public void archiveNotification(Long notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notification not found"));

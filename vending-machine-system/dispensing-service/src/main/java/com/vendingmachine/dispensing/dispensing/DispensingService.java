@@ -1,11 +1,16 @@
 package com.vendingmachine.dispensing.dispensing;
 
+import com.vendingmachine.common.aop.annotation.Auditable;
+import com.vendingmachine.common.aop.annotation.ExecutionTime;
 import com.vendingmachine.common.event.DispensingEvent;
+import com.vendingmachine.common.util.CorrelationIdUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import static com.vendingmachine.dispensing.dispensing.SimulationConfig.SimulationConstants.*;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +45,8 @@ public class DispensingService {
     private final Random random = new Random();
 
     @Transactional
+    @Auditable(operation = "DISPENSE_PRODUCTS", entityType = "DispensingOperation", logParameters = true)
+    @ExecutionTime(operation = "DISPENSE_PRODUCTS", warningThreshold = 2000, detailed = true)
     public void dispenseProductsForTransaction(Long transactionId, List<DispensingItem> items) {
         log.info("Starting dispensing for transaction {} with {} items", transactionId, items.size());
 
@@ -82,6 +89,7 @@ public class DispensingService {
         log.info("Completed dispensing operations for transaction {}", transactionId);
     }
 
+    @ExecutionTime(operation = "SIMULATE_DISPENSING", warningThreshold = 500)
     private boolean simulateDispensing(DispensingItem item) {
         if (simulationEnabled) {
             log.debug("The value of simulationEnabled is: {}", simulationEnabled);
@@ -116,6 +124,8 @@ public class DispensingService {
         return true; // Default to success if simulation is disabled
     }
 
+    @Auditable(operation = "PUBLISH_DISPENSING_EVENT", entityType = "DispensingEvent", logParameters = true)
+    @ExecutionTime(operation = "PUBLISH_DISPENSING_EVENT", warningThreshold = 1000)
     private void publishDispensingEvent(DispensingOperation dispensing) {
         DispensingEvent event = new DispensingEvent();
         event.setEventId(UUID.randomUUID().toString());
@@ -125,14 +135,21 @@ public class DispensingService {
         event.setStatus(dispensing.getStatus()); // SUCCESS or FAILED
         event.setTimestamp(System.currentTimeMillis());
 
-        kafkaTemplate.send(dispensingEventsTopic, event.getEventId(), event);
+        Message<DispensingEvent> message = MessageBuilder
+            .withPayload(event)
+            .setHeader("X-Correlation-ID", CorrelationIdUtil.getCorrelationId())
+            .build();
+
+        kafkaTemplate.send(dispensingEventsTopic, event.getEventId(), message.getPayload());
         log.info("Published dispensing event: {}", event);
     }
 
+    @ExecutionTime(operation = "GET_ALL_DISPENSING_TRANSACTIONS", warningThreshold = 800)
     public List<DispensingOperation> getAllDispensingTransactions() {
         return dispensingRepository.findAll();
     }
 
+    @ExecutionTime(operation = "GET_DISPENSING_BY_TRANSACTION", warningThreshold = 600)
     public List<DispensingOperation> getDispensingTransactionsByTransactionId(Long transactionId) {
         return dispensingRepository.findByTransactionId(transactionId);
     }

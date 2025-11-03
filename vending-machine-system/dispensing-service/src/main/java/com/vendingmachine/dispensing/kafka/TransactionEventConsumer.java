@@ -1,6 +1,9 @@
 package com.vendingmachine.dispensing.kafka;
 
+import com.vendingmachine.common.aop.annotation.Auditable;
+import com.vendingmachine.common.aop.annotation.ExecutionTime;
 import com.vendingmachine.common.event.TransactionEvent;
+import com.vendingmachine.common.util.CorrelationIdUtil;
 import com.vendingmachine.dispensing.dispensing.DispensingItem;
 import com.vendingmachine.dispensing.dispensing.DispensingService;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +15,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -34,29 +39,41 @@ public class TransactionEventConsumer {
     @KafkaListener(topics = "transaction-events", groupId = "dispensing-service-group",
                    containerFactory = "transactionEventKafkaListenerContainerFactory")
     @Transactional
-    public void consumeTransactionEvent(TransactionEvent event) {
-        log.info("Received transaction event: {} for transaction {} with status {}",
-                event.getEventId(), event.getTransactionId(), event.getStatus());
-
+    @Auditable(operation = "CONSUME_TRANSACTION_EVENT", entityType = "TransactionEvent", logParameters = true)
+    @ExecutionTime(operation = "CONSUME_TRANSACTION_EVENT", warningThreshold = 2500)
+    public void consumeTransactionEvent(@Payload TransactionEvent event,
+                                       @Header(value = "X-Correlation-ID", required = false) String correlationId) {
         try {
-            if ("PROCESSING".equals(event.getStatus())) {
-                // Transaction is ready for dispensing - get transaction items
-                List<DispensingItem> items = getTransactionItems(event.getTransactionId());
-                if (!items.isEmpty()) {
-                    dispensingService.dispenseProductsForTransaction(event.getTransactionId(), items);
-                    log.info("Dispensing initiated for transaction {}", event.getTransactionId());
-                } else {
-                    log.warn("No items found for transaction {}", event.getTransactionId());
-                }
-            } else {
-                log.debug("Ignoring transaction event with status: {}", event.getStatus());
+            if (correlationId != null) {
+                CorrelationIdUtil.setCorrelationId(correlationId);
             }
-        } catch (Exception e) {
-            log.error("Failed to process transaction event: {}", event.getEventId(), e);
-            throw new RuntimeException("Failed to process transaction event", e);
+            
+            log.info("Received transaction event: {} for transaction {} with status {}",
+                    event.getEventId(), event.getTransactionId(), event.getStatus());
+
+            try {
+                if ("PROCESSING".equals(event.getStatus())) {
+                    // Transaction is ready for dispensing - get transaction items
+                    List<DispensingItem> items = getTransactionItems(event.getTransactionId());
+                    if (!items.isEmpty()) {
+                        dispensingService.dispenseProductsForTransaction(event.getTransactionId(), items);
+                        log.info("Dispensing initiated for transaction {}", event.getTransactionId());
+                    } else {
+                        log.warn("No items found for transaction {}", event.getTransactionId());
+                    }
+                } else {
+                    log.debug("Ignoring transaction event with status: {}", event.getStatus());
+                }
+            } catch (Exception e) {
+                log.error("Failed to process transaction event: {}", event.getEventId(), e);
+                throw new RuntimeException("Failed to process transaction event", e);
+            }
+        } finally {
+            CorrelationIdUtil.clearCorrelationId();
         }
     }
 
+    @ExecutionTime(operation = "GET_TRANSACTION_ITEMS", warningThreshold = 800)
     private List<DispensingItem> getTransactionItems(Long transactionId) {
         try {
             String url = transactionServiceUrl + "/api/admin/transaction/" + transactionId + "/items";

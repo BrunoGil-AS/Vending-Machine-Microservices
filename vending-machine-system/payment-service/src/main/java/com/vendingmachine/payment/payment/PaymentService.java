@@ -1,12 +1,17 @@
 package com.vendingmachine.payment.payment;
 
+import com.vendingmachine.common.aop.annotation.Auditable;
+import com.vendingmachine.common.aop.annotation.ExecutionTime;
 import com.vendingmachine.common.event.PaymentEvent;
 import com.vendingmachine.common.event.TransactionEvent;
+import com.vendingmachine.common.util.CorrelationIdUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import static com.vendingmachine.payment.payment.SimulationConfig.SimulationConstants.*;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,11 +41,15 @@ public class PaymentService {
     private final Random random = new Random();
 
     @Transactional
+    @Auditable(operation = "PROCESS_PAYMENT_FOR_TRANSACTION", entityType = "Payment", logParameters = true)
+    @ExecutionTime(operation = "PROCESS_PAYMENT_FOR_TRANSACTION", warningThreshold = 1000, detailed = true)
     public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent, PaymentRequest paymentRequest) {
         return processPaymentForTransaction(transactionEvent, paymentRequest, false);
     }
     
     @Transactional
+    @Auditable(operation = "PROCESS_PAYMENT_WITH_EVENT", entityType = "Payment", logParameters = true)
+    @ExecutionTime(operation = "PROCESS_PAYMENT_WITH_EVENT", warningThreshold = 1200, detailed = true)
     public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent, PaymentRequest paymentRequest, boolean publishEvent) {
         log.info("Processing payment for transaction: {} with amount {} and method {}",
                 transactionEvent.getTransactionId(), transactionEvent.getTotalAmount(), paymentRequest.getPaymentMethod());
@@ -81,6 +90,8 @@ public class PaymentService {
     }
 
     @Transactional
+    @Auditable(operation = "PROCESS_PAYMENT_FROM_KAFKA", entityType = "Payment", logParameters = true)
+    @ExecutionTime(operation = "PROCESS_PAYMENT_FROM_KAFKA", warningThreshold = 1200, detailed = true)
     public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent) {
         // Backward compatibility method for Kafka events - defaults to credit card and publishes events
         PaymentRequest defaultRequest = new PaymentRequest();
@@ -90,6 +101,7 @@ public class PaymentService {
         return processPaymentForTransaction(transactionEvent, defaultRequest, true); // Enable event publishing for async flow
     }
 
+    @ExecutionTime(operation = "SIMULATE_PAYMENT", warningThreshold = 300)
     private boolean simulatePayment(PaymentRequest paymentRequest) {
         PaymentMethod method = paymentRequest.getPaymentMethod();
 
@@ -110,6 +122,8 @@ public class PaymentService {
         }
     }
 
+    @Auditable(operation = "PUBLISH_PAYMENT_EVENT", entityType = "PaymentEvent", logParameters = true)
+    @ExecutionTime(operation = "PUBLISH_PAYMENT_EVENT", warningThreshold = 1000)
     private void publishPaymentEvent(PaymentTransaction transaction) {
         PaymentEvent event = new PaymentEvent();
         event.setEventId(UUID.randomUUID().toString());
@@ -119,10 +133,16 @@ public class PaymentService {
         event.setStatus(transaction.getStatus());
         event.setTimestamp(System.currentTimeMillis());
 
-        kafkaTemplate.send(paymentEventsTopic, event.getEventId(), event);
+        Message<PaymentEvent> message = MessageBuilder
+            .withPayload(event)
+            .setHeader("X-Correlation-ID", CorrelationIdUtil.getCorrelationId())
+            .build();
+
+        kafkaTemplate.send(paymentEventsTopic, event.getEventId(), message.getPayload());
         log.info("Published payment event: {}", event);
     }
 
+    @ExecutionTime(operation = "GET_ALL_PAYMENT_TRANSACTIONS", warningThreshold = 800)
     public List<PaymentTransaction> getAllTransactions() {
         return transactionRepository.findAll();
     }

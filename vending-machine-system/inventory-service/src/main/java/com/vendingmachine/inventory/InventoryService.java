@@ -2,6 +2,8 @@ package com.vendingmachine.inventory;
 
 import com.vendingmachine.common.event.StockUpdateEvent;
 import com.vendingmachine.common.event.LowStockAlertEvent;
+import com.vendingmachine.common.aop.annotation.Auditable;
+import com.vendingmachine.common.aop.annotation.ExecutionTime;
 import com.vendingmachine.inventory.kafka.KafkaProducerService;
 import com.vendingmachine.inventory.product.Product;
 import com.vendingmachine.inventory.product.ProductRepository;
@@ -22,7 +24,7 @@ import java.util.UUID;
 @Service
 public class InventoryService {
 
-    private static final Logger logger = LoggerFactory.getLogger(InventoryService.class);// change to notation @Log
+    private static final Logger logger = LoggerFactory.getLogger(InventoryService.class);
 
     @Autowired
     private ProductRepository productRepository;
@@ -202,6 +204,8 @@ public class InventoryService {
         return updatedProduct;
     }
 
+    @Auditable(operation = "Update Stock", entityType = "Stock", logParameters = true, logResult = true)
+    @ExecutionTime(operation = "updateStock", warningThreshold = 800, detailed = true)
     public Stock updateStock(Long productId, Integer quantity) {
         logger.info("Updating stock for product ID: {}, quantity change: {}", productId, quantity);
         Stock existingStock = stockRepository.findByProductId(productId)
@@ -337,6 +341,7 @@ public class InventoryService {
         return updatedStock;
     }
 
+    @ExecutionTime(operation = "checkInventoryAvailability", warningThreshold = 500)
     public boolean checkInventoryAvailability(List<Map<String, Object>> items) {
         logger.debug("Checking inventory availability for {} items", items.size());
 
