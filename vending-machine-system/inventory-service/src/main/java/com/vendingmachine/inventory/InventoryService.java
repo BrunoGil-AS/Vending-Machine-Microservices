@@ -364,6 +364,62 @@ public class InventoryService {
         return true;
     }
 
+    /**
+     * Check availability for multiple products and return detailed information per product.
+     * 
+     * @param items List of items with productId and quantity
+     * @return Map of productId to availability details (available, quantity, reason)
+     */
+    public Map<Long, Map<String, Object>> checkMultipleAvailability(List<Map<String, Object>> items) {
+        logger.debug("Checking detailed availability for {} items", items.size());
+        
+        Map<Long, Map<String, Object>> results = new java.util.HashMap<>();
+        
+        for (Map<String, Object> item : items) {
+            Long productId = ((Number) item.get("productId")).longValue();
+            Integer requestedQuantity = ((Number) item.get("quantity")).intValue();
+            
+            logger.debug("Checking availability for product ID: {}, requested quantity: {}", 
+                        productId, requestedQuantity);
+            
+            Optional<Stock> stockOpt = getStockByProductId(productId);
+            
+            if (stockOpt.isEmpty()) {
+                logger.warn("Product ID: {} not found in inventory", productId);
+                results.put(productId, Map.of(
+                    "available", false,
+                    "quantity", 0,
+                    "reason", "Product not found"
+                ));
+                continue;
+            }
+            
+            Stock stock = stockOpt.get();
+            int availableQuantity = stock.getQuantity();
+            
+            if (availableQuantity >= requestedQuantity) {
+                logger.debug("Product ID: {} has sufficient stock. Available: {}, Requested: {}", 
+                            productId, availableQuantity, requestedQuantity);
+                results.put(productId, Map.of(
+                    "available", true,
+                    "quantity", availableQuantity,
+                    "reason", "In stock"
+                ));
+            } else {
+                logger.warn("Product ID: {} has insufficient stock. Available: {}, Requested: {}", 
+                           productId, availableQuantity, requestedQuantity);
+                results.put(productId, Map.of(
+                    "available", false,
+                    "quantity", availableQuantity,
+                    "reason", "Insufficient stock"
+                ));
+            }
+        }
+        
+        logger.info("Availability check completed for {} items", items.size());
+        return results;
+    }
+
     public void deleteProduct(Long productId) {
         logger.info("Deleting product with ID: {}", productId);
         if (!productRepository.existsById(productId)) {

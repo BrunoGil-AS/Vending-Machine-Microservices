@@ -49,6 +49,22 @@ public class ProductController {
         return ResponseEntity.ok(Map.of("available", available));
     }
 
+    /**
+     * Check availability for multiple products with detailed information per product.
+     * Returns a map of productId to availability details.
+     * 
+     * @param items List of items with productId and quantity
+     * @return Map of productId to availability details
+     */
+    @PostMapping("/inventory/check-multiple")
+    public ResponseEntity<Map<Long, Map<String, Object>>> checkMultipleAvailability(
+            @RequestBody List<Map<String, Object>> items) {
+        logger.info("Received request to check multiple availability for {} items", items.size());
+        Map<Long, Map<String, Object>> results = inventoryService.checkMultipleAvailability(items);
+        logger.info("Multiple availability check completed for {} items", items.size());
+        return ResponseEntity.ok(results);
+    }
+
     @GetMapping("/inventory/availability/{productId}")
     public ResponseEntity<Stock> getAvailability(@PathVariable Long productId) {
         logger.info("Received request to get availability for product ID: {}", productId);
@@ -81,6 +97,28 @@ public class ProductController {
         logger.info("Stock updated successfully for product ID: {}", productId);
         return updatedStock;
     }
+
+    /**
+     * Deduct stock quantity for a product (used by transaction service).
+     * 
+     * @param productId Product ID
+     * @param request Map containing the quantity to deduct
+     * @return Updated stock
+     */
+    @PutMapping("/inventory/products/{productId}/stock/deduct")
+    public ResponseEntity<Stock> deductStock(
+            @PathVariable Long productId, 
+            @RequestBody Map<String, Object> request) {
+        Integer quantity = ((Number) request.get("quantity")).intValue();
+        logger.info("Received request to deduct {} units from product ID: {}", quantity, productId);
+        
+        // Deduct stock (negative quantity)
+        Stock updatedStock = inventoryService.updateStock(productId, -quantity);
+        logger.info("Stock deducted successfully for product ID: {}. New quantity: {}", 
+                   productId, updatedStock.getQuantity());
+        return ResponseEntity.ok(updatedStock);
+    }
+
     @DeleteMapping("/admin/inventory/products/{productId}")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long productId) {
         logger.info("Received request to delete product ID: {}", productId);

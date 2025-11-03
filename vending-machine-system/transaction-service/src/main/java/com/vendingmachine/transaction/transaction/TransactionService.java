@@ -10,7 +10,11 @@ import com.vendingmachine.transaction.transaction.dto.TransactionSummaryDTO;
 import com.vendingmachine.transaction.transaction.dto.PaymentInfo;
 import com.vendingmachine.transaction.transaction.dto.PaymentMethod;
 import com.vendingmachine.transaction.kafka.KafkaEventService;
+import com.vendingmachine.transaction.exception.InsufficientStockException;
+import com.vendingmachine.transaction.exception.PaymentFailedException;
 import com.vendingmachine.common.event.TransactionEvent;
+import com.vendingmachine.common.aop.annotation.Auditable;
+import com.vendingmachine.common.aop.annotation.ExecutionTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -37,6 +41,8 @@ public class TransactionService {
     private final DispensingServiceClient dispensingClient;
 
     @Transactional
+    @Auditable(operation = "Purchase Transaction", entityType = "Transaction", logParameters = true, logResult = true)
+    @ExecutionTime(operation = "purchase", warningThreshold = 2000, detailed = true)
     public TransactionDTO purchase(PurchaseRequestDTO request) {
         log.info("Starting anonymous purchase transaction for {} items", request.getItems().size());
 
@@ -57,7 +63,7 @@ public class TransactionService {
         if (!checkInventoryAvailability(request.getItems())) {
             transaction.setStatus(TransactionStatus.FAILED);
             transactionRepository.save(transaction);
-            throw new RuntimeException("Insufficient inventory for one or more items");
+            throw new InsufficientStockException("Stock unavailable - Product(s) out of stock or inventory service unreachable");
         }
 
         // Calculate total amount from inventory response
@@ -72,7 +78,7 @@ public class TransactionService {
         if (!paymentSuccess) {
             savedTransaction.setStatus(TransactionStatus.FAILED);
             transactionRepository.save(savedTransaction);
-            throw new RuntimeException("Payment processing failed");
+            throw new PaymentFailedException("Payment processing failed - Service unavailable or insufficient funds");
         }
 
         // Calculate change for cash payments
@@ -84,7 +90,7 @@ public class TransactionService {
             } else {
                 savedTransaction.setStatus(TransactionStatus.FAILED);
                 transactionRepository.save(savedTransaction);
-                throw new RuntimeException("Insufficient cash amount provided");
+                throw new PaymentFailedException("Insufficient cash amount provided - Required: " + totalAmount);
             }
         } else {
             // For card payments, paid amount equals total amount
@@ -123,6 +129,7 @@ public class TransactionService {
     /**
      * Check inventory availability using circuit breaker enabled client
      */
+    @ExecutionTime(operation = "checkInventoryAvailability", warningThreshold = 500)
     private boolean checkInventoryAvailability(List<PurchaseItemDTO> items) {
         try {
             // Convert items to format expected by client
@@ -198,6 +205,7 @@ public class TransactionService {
      * Process payment using circuit breaker enabled client
      */
     @SuppressWarnings("null")
+    @ExecutionTime(operation = "processPayment", warningThreshold = 800)
     private boolean processPayment(Long transactionId, PaymentInfo paymentInfo, BigDecimal amount) {
         try {
             // Use circuit breaker enabled payment client
@@ -236,6 +244,8 @@ public class TransactionService {
     }
 
     @Transactional
+    @Auditable(operation = "Compensate Transaction", entityType = "Transaction", logParameters = true)
+    @ExecutionTime(operation = "compensateTransaction", warningThreshold = 1500, detailed = true)
     public void compensateTransaction(Long transactionId, String reason) {
         log.info("Starting compensation for transaction {}: {}", transactionId, reason);
 
@@ -289,6 +299,7 @@ public class TransactionService {
      * Refund payment using circuit breaker enabled client
      */
     @SuppressWarnings("null")
+    @ExecutionTime(operation = "refundPayment", warningThreshold = 800)
     private boolean refundPayment(Long transactionId, BigDecimal amount) {
         try {
             // Use circuit breaker enabled payment client
@@ -342,6 +353,7 @@ public class TransactionService {
                 .orElseThrow(() -> new RuntimeException("Transaction not found: " + id));
     }
 
+    @ExecutionTime(operation = "getTransactionSummary", warningThreshold = 1000)
     public TransactionSummaryDTO getTransactionSummary() {
         List<Transaction> allTransactions = transactionRepository.findAll();
 
