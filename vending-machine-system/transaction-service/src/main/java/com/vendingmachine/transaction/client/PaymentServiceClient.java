@@ -24,6 +24,7 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("unused")
 public class PaymentServiceClient {
 
     private final RestTemplate restTemplate;

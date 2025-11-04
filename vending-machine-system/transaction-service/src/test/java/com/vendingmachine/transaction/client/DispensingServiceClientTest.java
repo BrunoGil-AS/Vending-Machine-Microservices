@@ -39,11 +39,13 @@ import static org.mockito.Mockito.*;
     "resilience4j.retry.instances.dispensing-service.enable-exponential-backoff=true",
     "resilience4j.retry.instances.dispensing-service.exponential-backoff-multiplier=2"
 })
+@SuppressWarnings("unchecked")
 class DispensingServiceClientTest {
 
     @Autowired
     private DispensingServiceClient dispensingClient;
 
+    @SuppressWarnings("removal")
     @MockBean
     private RestTemplate restTemplate;
 

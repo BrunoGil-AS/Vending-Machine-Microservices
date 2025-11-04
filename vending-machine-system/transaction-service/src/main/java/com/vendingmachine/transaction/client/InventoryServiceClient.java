@@ -23,6 +23,7 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("unused")
 public class InventoryServiceClient {
 
     private final RestTemplate restTemplate;

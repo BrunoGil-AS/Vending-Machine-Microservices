@@ -22,6 +22,7 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("unused")
 public class DispensingServiceClient {
 
     private final RestTemplate restTemplate;

@@ -40,11 +40,13 @@ import static org.mockito.Mockito.*;
     "resilience4j.retry.instances.inventory-service.enable-exponential-backoff=true",
     "resilience4j.retry.instances.inventory-service.exponential-backoff-multiplier=2"
 })
+@SuppressWarnings("unchecked")
 class InventoryServiceClientTest {
 
     @Autowired
     private InventoryServiceClient inventoryClient;
 
+    @SuppressWarnings("removal")
     @MockBean
     private RestTemplate restTemplate;
 

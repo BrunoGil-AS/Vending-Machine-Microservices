@@ -41,11 +41,13 @@ import static org.mockito.Mockito.*;
     "resilience4j.retry.instances.payment-service.enable-exponential-backoff=true",
     "resilience4j.retry.instances.payment-service.exponential-backoff-multiplier=2"
 })
+@SuppressWarnings("unchecked")
 class PaymentServiceClientTest {
 
     @Autowired
     private PaymentServiceClient paymentClient;
-
+    
+    @SuppressWarnings("removal")
     @MockBean
     private RestTemplate restTemplate;
 

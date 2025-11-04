@@ -2,7 +2,6 @@ package com.vendingmachine.transaction.transaction;
 
 import com.vendingmachine.transaction.client.InventoryServiceClient;
 import com.vendingmachine.transaction.client.PaymentServiceClient;
-import com.vendingmachine.transaction.client.DispensingServiceClient;
 import com.vendingmachine.transaction.transaction.dto.PurchaseRequestDTO;
 import com.vendingmachine.transaction.transaction.dto.PurchaseItemDTO;
 import com.vendingmachine.transaction.transaction.dto.TransactionDTO;
@@ -38,7 +37,6 @@ public class TransactionService {
     // Circuit Breaker enabled clients
     private final InventoryServiceClient inventoryClient;
     private final PaymentServiceClient paymentClient;
-    private final DispensingServiceClient dispensingClient;
 
     @Transactional
     @Auditable(operation = "Purchase Transaction", entityType = "Transaction", logParameters = true, logResult = true)
