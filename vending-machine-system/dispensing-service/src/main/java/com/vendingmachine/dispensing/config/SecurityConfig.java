@@ -1,4 +1,4 @@
-package com.vendingmachine.inventory.config;
+package com.vendingmachine.dispensing.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,8 +16,9 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Arrays;
 
 /**
- * Security Configuration for Inventory Service
+ * Security Configuration for Dispensing Service
  * Only allows access from API Gateway and authorized internal services
+ * Implements role-based authorization for admin endpoints
  */
 @Configuration
 @EnableWebSecurity
@@ -53,19 +54,21 @@ public class SecurityConfig {
                             return new AuthorizationDecision(false);
                         })
                         .anyRequest().access((authentication, request) -> {
-                            //request received from:
                             log.info("Request received from: {}", request.getRequest().getRemoteAddr());
                             log.info("Request made to: {}", request.getRequest().getRequestURI());
+                            
                             // Allow requests with internal service header (from gateway)
                             String internalService = request.getRequest().getHeader("X-Internal-Service");
                             if ("api-gateway".equals(internalService)) {
                                 return new AuthorizationDecision(true);
                             }
+                            
                             // Allow localhost for development and inter-service communication
                             String remoteAddr = request.getRequest().getRemoteAddr();
                             if ("127.0.0.1".equals(remoteAddr) || "0:0:0:0:0:0:0:1".equals(remoteAddr) || "localhost".equals(remoteAddr)) {
                                 return new AuthorizationDecision(true);
                             }
+                            
                             // Deny external access
                             return new AuthorizationDecision(false);
                         })

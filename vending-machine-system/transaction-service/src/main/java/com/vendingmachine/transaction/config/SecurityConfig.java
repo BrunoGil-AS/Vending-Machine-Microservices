@@ -33,6 +33,25 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/api/admin/**").access((authentication, request) -> {
+                            // Check for internal service header (from gateway)
+                            String internalService = request.getRequest().getHeader("X-Internal-Service");
+                            if (!"api-gateway".equals(internalService)) {
+                                log.warn("Request to admin endpoint without valid internal service header");
+                                return new AuthorizationDecision(false);
+                            }
+                            
+                            // Check for admin role
+                            String userRole = request.getRequest().getHeader("X-User-Role");
+                            log.info("Admin endpoint accessed with role: {}", userRole);
+                            
+                            if ("ADMIN".equals(userRole) || "SUPER_ADMIN".equals(userRole)) {
+                                return new AuthorizationDecision(true);
+                            }
+                            
+                            log.warn("Access denied - insufficient privileges. Role: {}", userRole);
+                            return new AuthorizationDecision(false);
+                        })
                         .anyRequest().access((authentication, request) -> {
                             log.info("Request received from: {}", request.getRequest().getRemoteAddr());
                             log.info("Request made to: {}", request.getRequest().getRequestURI());
