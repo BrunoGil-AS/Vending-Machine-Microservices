@@ -44,7 +44,7 @@ public class SecurityConfig {
                             
                             // Check for admin role
                             String userRole = request.getRequest().getHeader("X-User-Role");
-                            log.info("Admin endpoint accessed with role: {}", userRole);
+                            log.debug("Admin endpoint accessed with role: {}", userRole);
                             
                             if ("ADMIN".equals(userRole) || "SUPER_ADMIN".equals(userRole)) {
                                 return new AuthorizationDecision(true);
