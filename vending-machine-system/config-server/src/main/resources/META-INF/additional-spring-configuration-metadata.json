@@ -1,0 +1,22 @@
+{
+  "properties": [
+    {
+      "name": "application.gateway.identifier",
+      "type": "java.lang.String",
+      "description": "Unique identifier for the gateway requests.",
+      "defaultValue": "api-gateway"
+    },
+    {
+      "name": "application.request.source.gateway",
+      "type": "java.lang.String",
+      "description": "Header value identifying requests from gateway to services (client-originated).",
+      "defaultValue": "gateway"
+    },
+    {
+      "name": "application.request.source.internal",
+      "type": "java.lang.String",
+      "description": "Header value identifying internal service-to-service communication.",
+      "defaultValue": "internal"
+    }
+  ]
+}

@@ -76,7 +76,8 @@ public class TransactionEventConsumer {
     @ExecutionTime(operation = "GET_TRANSACTION_ITEMS", warningThreshold = 800)
     private List<DispensingItem> getTransactionItems(Long transactionId) {
         try {
-            String url = transactionServiceUrl + "/api/admin/transaction/" + transactionId + "/items";
+            // Use internal endpoint for inter-service communication
+            String url = transactionServiceUrl + "/api/internal/transaction/" + transactionId + "/items";
             HttpHeaders headers = new HttpHeaders();
             headers.set("X-Internal-Service", "dispensing-service");
             HttpEntity<?> entity = new HttpEntity<>(headers);

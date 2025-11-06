@@ -20,6 +20,7 @@ import java.util.Arrays;
 /**
  * Security Configuration for Inventory Service
  * Only allows access from API Gateway and authorized internal services
+ * Implements header-based filtering to differentiate between client requests and inter-service communication
  */
 @Configuration
 @EnableWebSecurity
@@ -28,6 +29,9 @@ public class SecurityConfig {
 
     @Value(value = "${application.gateway.identifier}")
     private String GATEWAY_IDENTIFIER;
+
+    @Value("${application.request.source.internal:internal}")
+    private String REQUEST_SOURCE_INTERNAL;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -39,21 +43,24 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/api/admin/**").access((authentication, request) -> {
+                            String remoteAddr = request.getRequest().getRemoteAddr();
+                            
+                            // Allow inter-service communication (requests with X-Request-Source: internal)
+                            String requestSource = request.getRequest().getHeader(REQUEST_SOURCE_HEADER);
+                            if (REQUEST_SOURCE_INTERNAL.equals(requestSource) && LOCAL_IP_MAP.get(remoteAddr) != null) {
+                                log.debug("Inter-service request allowed to admin endpoint from: {}", remoteAddr);
+                                return new AuthorizationDecision(true);
+                            }
+                            
                             // Check for internal service header (from gateway)
                             log.info("internal header {}:{}", INTERNAL_SERVICE_HEADER, GATEWAY_IDENTIFIER);
                             String internalService = request.getRequest().getHeader(INTERNAL_SERVICE_HEADER);
-                            String remoteAddr = request.getRequest().getRemoteAddr();
                             if (!GATEWAY_IDENTIFIER.equals(internalService)) {
                                 log.warn("Request to admin endpoint without valid internal service header");
                                 return new AuthorizationDecision(false);
                             }
-                            // Allow localhost for development and inter-service communication
-                            // TODO: add a Client header type to filter request from clients.
-                            if (LOCAL_IP_MAP.get(remoteAddr) != null) {
-                                return new AuthorizationDecision(true);
-                            }
 
-                            // Check for admin role
+                            // Check for admin role (for client requests through gateway)
                             String userRole = request.getRequest().getHeader("X-User-Role");
                             log.debug("Admin endpoint accessed with role: {}", userRole);
 
@@ -70,17 +77,22 @@ public class SecurityConfig {
                             log.info("internal header {}:{}", INTERNAL_SERVICE_HEADER, GATEWAY_IDENTIFIER);
                             log.info("Request received from: {}", remoteAddr);
                             log.info("Request made to: {}", request.getRequest().getRequestURI());
+                            
                             // Allow requests with internal service header (from gateway)
                             String internalService = request.getRequest().getHeader(INTERNAL_SERVICE_HEADER);
                             if (GATEWAY_IDENTIFIER.equals(internalService)) {
                                 return new AuthorizationDecision(true);
                             }
-                            // Allow localhost for development and inter-service communication
-                            // TODO: add a Client header type to filter request from clients.
-                            if (LOCAL_IP_MAP.get(remoteAddr) != null) {
+                            
+                            // Allow inter-service communication (requests with X-Request-Source: internal)
+                            String requestSource = request.getRequest().getHeader(REQUEST_SOURCE_HEADER);
+                            if (REQUEST_SOURCE_INTERNAL.equals(requestSource) && LOCAL_IP_MAP.get(remoteAddr) != null) {
+                                log.debug("Inter-service request allowed from: {}", remoteAddr);
                                 return new AuthorizationDecision(true);
                             }
+                            
                             // Deny external access
+                            log.warn("External access denied from: {}", remoteAddr);
                             return new AuthorizationDecision(false);
                         }))
                 .exceptionHandling(ex -> ex

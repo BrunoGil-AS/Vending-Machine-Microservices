@@ -1,4 +1,4 @@
-package com.vendingmachine.inventory.config;
+package com.vendingmachine.notification.config;
 
 import java.util.Map;
 

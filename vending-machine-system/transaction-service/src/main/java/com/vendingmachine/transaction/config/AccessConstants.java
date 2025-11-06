@@ -1,4 +1,4 @@
-package com.vendingmachine.inventory.config;
+package com.vendingmachine.transaction.config;
 
 import java.util.Map;
 
