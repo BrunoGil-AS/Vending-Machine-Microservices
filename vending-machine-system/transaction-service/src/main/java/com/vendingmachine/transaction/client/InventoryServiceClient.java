@@ -1,5 +1,6 @@
 package com.vendingmachine.transaction.client;
 
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +19,7 @@ import java.util.Map;
 
 /**
  * Client for communicating with Inventory Service.
- * Implements Circuit Breaker and Retry patterns for fault tolerance.
+ * Implements Circuit Breaker, Retry, and Bulkhead patterns for fault tolerance.
  */
 @Component
 @RequiredArgsConstructor
@@ -34,10 +35,12 @@ public class InventoryServiceClient {
     /**
      * Checks product availability in inventory.
      * Uses Circuit Breaker to prevent cascading failures.
+     * Uses Bulkhead to limit concurrent inventory checks.
      * 
      * @param items List of items with productId and quantity
      * @return Map of productId to availability status
      */
+    @Bulkhead(name = "inventory-service", fallbackMethod = "checkAvailabilityFallback", type = Bulkhead.Type.SEMAPHORE)
     @CircuitBreaker(name = "inventory-service", fallbackMethod = "checkAvailabilityFallback")
     @Retry(name = "inventory-service")
     public Map<Long, Map<String, Object>> checkAvailability(List<Map<String, Object>> items) {
@@ -62,7 +65,7 @@ public class InventoryServiceClient {
     }
 
     /**
-     * Fallback method when inventory service is unavailable.
+     * Fallback method when inventory service is unavailable or bulkhead is full.
      * Returns unavailable status for all items to fail-safe.
      * 
      * @param items List of items that were being checked
@@ -73,7 +76,13 @@ public class InventoryServiceClient {
             List<Map<String, Object>> items, 
             Exception ex) {
         
-        log.error("Circuit breaker activated for inventory check. Error: {}", ex.getMessage());
+        if (ex.getClass().getName().contains("BulkheadFullException")) {
+            log.error("Bulkhead full for inventory service");
+            log.warn("Too many concurrent inventory requests - rate limiting active");
+        } else {
+            log.error("Circuit breaker activated for inventory check. Error: {}", ex.getMessage());
+        }
+        
         log.warn("Inventory service unavailable - marking all items as unavailable");
 
         // Fail-safe: Return unavailable for all items
@@ -83,7 +92,9 @@ public class InventoryServiceClient {
                 item -> ((Number) item.get("productId")).longValue(),
                 item -> Map.of(
                     "available", false,
-                    "reason", "Inventory service temporarily unavailable",
+                    "reason", ex.getClass().getName().contains("BulkheadFullException")
+                        ? "Inventory service at capacity - please retry"
+                        : "Inventory service temporarily unavailable",
                     "fallback", true
                 )
             ));
@@ -95,6 +106,7 @@ public class InventoryServiceClient {
      * @param productId Product ID to update
      * @param quantity Quantity to deduct
      */
+    @Bulkhead(name = "inventory-service", fallbackMethod = "updateStockFallback", type = Bulkhead.Type.SEMAPHORE)
     @CircuitBreaker(name = "inventory-service", fallbackMethod = "updateStockFallback")
     @Retry(name = "inventory-service")
     public void updateStock(Long productId, Integer quantity) {
@@ -128,6 +140,7 @@ public class InventoryServiceClient {
      * @param productId Product ID
      * @return Product price, or 0.0 if unavailable
      */
+    @Bulkhead(name = "inventory-service", fallbackMethod = "getProductPriceFallback", type = Bulkhead.Type.SEMAPHORE)
     @CircuitBreaker(name = "inventory-service", fallbackMethod = "getProductPriceFallback")
     @Retry(name = "inventory-service")
     public java.math.BigDecimal getProductPrice(Long productId) {

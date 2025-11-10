@@ -4,6 +4,8 @@ import com.vendingmachine.common.aop.annotation.Auditable;
 import com.vendingmachine.common.aop.annotation.ExecutionTime;
 import com.vendingmachine.common.event.DispensingEvent;
 import com.vendingmachine.common.util.CorrelationIdUtil;
+import com.vendingmachine.dispensing.exception.HardwareException;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,6 +47,7 @@ public class DispensingService {
     private final Random random = new Random();
 
     @Transactional
+    @Bulkhead(name = "hardware-operations", fallbackMethod = "dispenseProductsFallback", type = Bulkhead.Type.SEMAPHORE)
     @Auditable(operation = "DISPENSE_PRODUCTS", entityType = "DispensingOperation", logParameters = true)
     @ExecutionTime(operation = "DISPENSE_PRODUCTS", warningThreshold = 2000, detailed = true)
     public void dispenseProductsForTransaction(Long transactionId, List<DispensingItem> items) {
@@ -53,8 +56,7 @@ public class DispensingService {
         // Check hardware status before dispensing
         if (!hardwareStatusService.isHardwareOperational()) {
             log.error("Hardware is not operational, cannot dispense for transaction {}", transactionId);
-            // Publish failure event or handle accordingly
-            return;
+            throw HardwareException.hardwareNotOperational();
         }
 
         for (DispensingItem item : items) {
@@ -66,18 +68,26 @@ public class DispensingService {
 
             dispensing = dispensingRepository.save(dispensing);
 
-            boolean success = simulateDispensing(item);
-
-            if (success) {
-                dispensing.setStatus("SUCCESS");
-                log.info("Successfully dispensed {} units of product {} for transaction {}",
-                        item.getQuantity(), item.getProductId(), transactionId);
-            } else {
+            try {
+                boolean success = simulateDispensing(item);
+                
+                if (success) {
+                    dispensing.setStatus("SUCCESS");
+                    log.info("Successfully dispensed {} units of product {} for transaction {}",
+                            item.getQuantity(), item.getProductId(), transactionId);
+                } else {
+                    dispensing.setStatus("FAILED");
+                    dispensing.setErrorMessage("Dispensing failed - unknown hardware error");
+                    log.warn("Failed to dispense product {} for transaction {}", item.getProductId(), transactionId);
+                }
+            } catch (HardwareException e) {
                 dispensing.setStatus("FAILED");
-                dispensing.setErrorMessage("Dispensing failed - possible jam or hardware error");
-                log.warn("Failed to dispense product {} for transaction {}", item.getProductId(), transactionId);
+                dispensing.setErrorMessage(String.format("Hardware failure: %s [Component: %s, Operation: %s]", 
+                        e.getMessage(), e.getHardwareComponent(), e.getOperationType()));
+                log.error("Hardware exception during dispensing for product {} in transaction {}: {}", 
+                        item.getProductId(), transactionId, e.toString());
                 // Report hardware error
-                hardwareStatusService.reportHardwareError("dispenser_motor", "Dispensing failure detected");
+                hardwareStatusService.reportHardwareError(e.getHardwareComponent(), e.getMessage());
             }
 
             dispensingRepository.save(dispensing);
@@ -94,26 +104,28 @@ public class DispensingService {
         if (simulationEnabled) {
             log.debug("The value of simulationEnabled is: {}", simulationEnabled);
             log.debug("Dispensing simulation enabled; running jam simulation with probability: {}, success rate: {} and verification rate: {}", jamProbability, successRate, verificationSuccessRate);
+            
             // RANDOM: jam probability
             if (random.nextDouble() < jamProbability) {
                 log.warn("Dispensing jam detected for product {}", item.getProductId());
                 hardwareStatusService.reportHardwareError("product_chute", "Jam detected during dispensing");
-                return false;
+                throw HardwareException.productJam(item.getProductId());
             }
+            
             boolean dispensed = random.nextDouble() < successRate;
             if (dispensed) {
-                // 2) Verification simulation
+                // Verification simulation
                 if (random.nextDouble() < verificationSuccessRate) {
                     log.debug("Dispensing verification succeeded for product {}", item.getProductId());
                     return true;
                 } else {
                     log.warn("Dispensing verification failed for product {}", item.getProductId());
                     hardwareStatusService.reportHardwareError("sensor_array", "Verification failed after dispensing");
-                    return false;
+                    throw HardwareException.verificationFailure(item.getProductId());
                 }
             } else {
                 log.warn("Dispensing failed for product {} due to simulated hardware failure", item.getProductId());
-                return false;
+                throw HardwareException.dispensingMotorFailure(item.getProductId());
             }
         } else {
             log.debug("Dispensing simulation disabled; skipping jam simulation");
@@ -144,13 +156,55 @@ public class DispensingService {
         log.info("Published dispensing event: {}", event);
     }
 
+    @Bulkhead(name = "database-operations", fallbackMethod = "getAllDispensingTransactionsFallback", type = Bulkhead.Type.SEMAPHORE)
     @ExecutionTime(operation = "GET_ALL_DISPENSING_TRANSACTIONS", warningThreshold = 800)
     public List<DispensingOperation> getAllDispensingTransactions() {
         return dispensingRepository.findAll();
     }
 
+    @Bulkhead(name = "database-operations", fallbackMethod = "getDispensingTransactionsByTransactionIdFallback", type = Bulkhead.Type.SEMAPHORE)
     @ExecutionTime(operation = "GET_DISPENSING_BY_TRANSACTION", warningThreshold = 600)
     public List<DispensingOperation> getDispensingTransactionsByTransactionId(Long transactionId) {
         return dispensingRepository.findByTransactionId(transactionId);
+    }
+
+    // Fallback methods for Bulkhead pattern
+
+    /**
+     * Fallback method when hardware operations bulkhead is full
+     */
+    private void dispenseProductsFallback(Long transactionId, List<DispensingItem> items, Exception ex) {
+        log.error("Hardware operations bulkhead full for transaction: {}. Error: {}", 
+                transactionId, ex.getMessage());
+        log.warn("Dispensing service hardware operations at capacity - rejecting transaction {}", transactionId);
+        
+        // Create failed dispensing operations for all items
+        for (DispensingItem item : items) {
+            DispensingOperation failedDispensing = new DispensingOperation();
+            failedDispensing.setTransactionId(transactionId);
+            failedDispensing.setProductId(item.getProductId());
+            failedDispensing.setQuantity(item.getQuantity());
+            failedDispensing.setStatus("FAILED_CAPACITY");
+            failedDispensing.setErrorMessage("Dispensing service at capacity - hardware operations bulkhead full");
+            
+            dispensingRepository.save(failedDispensing);
+            publishDispensingEvent(failedDispensing);
+        }
+    }
+
+    /**
+     * Fallback method when database operations bulkhead is full
+     */
+    private List<DispensingOperation> getAllDispensingTransactionsFallback(Exception ex) {
+        log.error("Database operations bulkhead full for getAllDispensingTransactions. Error: {}", ex.getMessage());
+        return List.of(); // Return empty list when database is at capacity
+    }
+
+    /**
+     * Fallback method when database operations bulkhead is full for specific transaction
+     */
+    private List<DispensingOperation> getDispensingTransactionsByTransactionIdFallback(Long transactionId, Exception ex) {
+        log.error("Database operations bulkhead full for transaction {}. Error: {}", transactionId, ex.getMessage());
+        return List.of(); // Return empty list when database is at capacity
     }
 }

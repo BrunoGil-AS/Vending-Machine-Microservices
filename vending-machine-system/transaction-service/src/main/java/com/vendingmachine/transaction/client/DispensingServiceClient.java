@@ -1,5 +1,6 @@
 package com.vendingmachine.transaction.client;
 
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ import java.util.Map;
 
 /**
  * Client for communicating with Dispensing Service.
- * Implements Circuit Breaker and Retry patterns for fault tolerance.
+ * Implements Circuit Breaker, Retry, and Bulkhead patterns for fault tolerance.
  */
 @Component
 @RequiredArgsConstructor
@@ -33,11 +34,13 @@ public class DispensingServiceClient {
     /**
      * Triggers product dispensing through the dispensing service.
      * Uses Circuit Breaker to prevent cascading failures.
+     * Uses Bulkhead to limit concurrent calls and prevent resource exhaustion.
      * 
      * @param transactionId Transaction ID
      * @param items List of items to dispense
      * @return Dispensing response with status
      */
+    @Bulkhead(name = "dispensing-service", fallbackMethod = "dispenseItemsFallback", type = Bulkhead.Type.SEMAPHORE)
     @CircuitBreaker(name = "dispensing-service", fallbackMethod = "dispenseItemsFallback")
     @Retry(name = "dispensing-service")
     public Map<String, Object> dispenseItems(String transactionId, List<Map<String, Object>> items) {
@@ -67,7 +70,7 @@ public class DispensingServiceClient {
     }
 
     /**
-     * Fallback method when dispensing service is unavailable.
+     * Fallback method when dispensing service is unavailable or bulkhead is full.
      * Returns failed status to trigger compensation (refund).
      * 
      * @param transactionId Transaction ID
@@ -80,8 +83,15 @@ public class DispensingServiceClient {
             List<Map<String, Object>> items, 
             Exception ex) {
         
-        log.error("Circuit breaker activated for dispensing. Transaction: {}, Error: {}", 
-                  transactionId, ex.getMessage());
+        // Check if it's a bulkhead full exception
+        if (ex.getClass().getName().contains("BulkheadFullException")) {
+            log.error("Bulkhead full for dispensing service. Transaction: {}", transactionId);
+            log.warn("Too many concurrent dispensing requests - rate limiting active");
+        } else {
+            log.error("Circuit breaker activated for dispensing. Transaction: {}, Error: {}", 
+                      transactionId, ex.getMessage());
+        }
+        
         log.warn("Dispensing service unavailable - marking as failed for transaction {}", transactionId);
         log.error("CRITICAL: Compensation (refund) required for transaction {}", transactionId);
 
@@ -93,7 +103,9 @@ public class DispensingServiceClient {
             "transactionId", transactionId,
             "dispensedItems", List.of(), // No items dispensed
             "failedItems", items, // All items failed
-            "reason", "Dispensing service temporarily unavailable",
+            "reason", ex.getClass().getName().contains("BulkheadFullException") 
+                ? "Dispensing service at capacity - please retry" 
+                : "Dispensing service temporarily unavailable",
             "fallback", true,
             "requiresCompensation", true // Flag for refund processing
         );
@@ -105,6 +117,7 @@ public class DispensingServiceClient {
      * @param transactionId Transaction ID to check
      * @return Dispensing status
      */
+    @Bulkhead(name = "dispensing-service", fallbackMethod = "getDispensingStatusFallback", type = Bulkhead.Type.SEMAPHORE)
     @CircuitBreaker(name = "dispensing-service", fallbackMethod = "getDispensingStatusFallback")
     public Map<String, Object> getDispensingStatus(String transactionId) {
         log.debug("Checking dispensing status for transaction {}", transactionId);

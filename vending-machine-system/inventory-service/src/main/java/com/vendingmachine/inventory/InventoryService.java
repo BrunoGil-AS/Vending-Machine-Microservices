@@ -11,6 +11,7 @@ import com.vendingmachine.inventory.product.ProductUtils;
 import com.vendingmachine.inventory.product.dto.PostProductDTO;
 import com.vendingmachine.inventory.stock.Stock;
 import com.vendingmachine.inventory.stock.StockRepository;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -204,6 +205,7 @@ public class InventoryService {
         return updatedProduct;
     }
 
+    @Bulkhead(name = "stock-updates", fallbackMethod = "updateStockFallback", type = Bulkhead.Type.SEMAPHORE)
     @Auditable(operation = "Update Stock", entityType = "Stock", logParameters = true, logResult = true)
     @ExecutionTime(operation = "updateStock", warningThreshold = 800, detailed = true)
     public Stock updateStock(Long productId, Integer quantity) {
@@ -375,6 +377,7 @@ public class InventoryService {
      * @param items List of items with productId and quantity
      * @return Map of productId to availability details (available, quantity, reason)
      */
+    @Bulkhead(name = "inventory-checks", fallbackMethod = "checkMultipleAvailabilityFallback", type = Bulkhead.Type.SEMAPHORE)
     public Map<Long, Map<String, Object>> checkMultipleAvailability(List<Map<String, Object>> items) {
         logger.debug("Checking detailed availability for {} items", items.size());
         
@@ -441,5 +444,50 @@ public class InventoryService {
         }
         productRepository.deleteById(productId);
         logger.info("Product with ID: {} deleted successfully", productId);
+    }
+
+    // Fallback methods for Bulkhead pattern
+
+    /**
+     * Fallback method when inventory checks bulkhead is full
+     */
+    private Map<Long, Map<String, Object>> checkMultipleAvailabilityFallback(List<Map<String, Object>> items, Exception ex) {
+        logger.error("Inventory checks bulkhead full for {} items. Error: {}", items.size(), ex.getMessage());
+        logger.warn("Inventory service at capacity - marking all items as unavailable");
+        
+        Map<Long, Map<String, Object>> results = new java.util.HashMap<>();
+        for (Map<String, Object> item : items) {
+            Long productId = ((Number) item.get("productId")).longValue();
+            results.put(productId, Map.of(
+                "available", false,
+                "reason", "Inventory service at capacity - please retry",
+                "fallback", true,
+                "requestedQuantity", item.get("quantity")
+            ));
+        }
+        return results;
+    }
+
+    /**
+     * Fallback method when stock updates bulkhead is full
+     */
+    private Stock updateStockFallback(Long productId, Integer quantity, Exception ex) {
+        logger.error("Stock updates bulkhead full for product {}. Quantity: {}. Error: {}", 
+                productId, quantity, ex.getMessage());
+        logger.warn("Stock update service at capacity - rejecting stock update for product {}", productId);
+        
+        // Return existing stock without changes to indicate failure
+        Optional<Stock> existingStock = stockRepository.findByProductId(productId);
+        if (existingStock.isPresent()) {
+            return existingStock.get();
+        } else {
+            // Create a placeholder stock to indicate the failure
+            Stock failureStock = Stock.builder()
+                .product(null) // Will be null to indicate failure
+                .quantity(-1)  // Negative quantity to indicate failure
+                .minThreshold(0)
+                .build();
+            return failureStock;
+        }
     }
 }

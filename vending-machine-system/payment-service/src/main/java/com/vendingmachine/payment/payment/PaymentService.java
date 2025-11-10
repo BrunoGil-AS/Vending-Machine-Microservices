@@ -5,6 +5,7 @@ import com.vendingmachine.common.aop.annotation.ExecutionTime;
 import com.vendingmachine.common.event.PaymentEvent;
 import com.vendingmachine.common.event.TransactionEvent;
 import com.vendingmachine.common.util.CorrelationIdUtil;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,6 +42,7 @@ public class PaymentService {
     private final Random random = new Random();
 
     @Transactional
+    @Bulkhead(name = "payment-processing", fallbackMethod = "processPaymentFallback", type = Bulkhead.Type.SEMAPHORE)
     @Auditable(operation = "PROCESS_PAYMENT_FOR_TRANSACTION", entityType = "Payment", logParameters = true)
     @ExecutionTime(operation = "PROCESS_PAYMENT_FOR_TRANSACTION", warningThreshold = 1000, detailed = true)
     public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent, PaymentRequest paymentRequest) {
@@ -48,6 +50,7 @@ public class PaymentService {
     }
     
     @Transactional
+    @Bulkhead(name = "payment-processing", fallbackMethod = "processPaymentWithEventFallback", type = Bulkhead.Type.SEMAPHORE)
     @Auditable(operation = "PROCESS_PAYMENT_WITH_EVENT", entityType = "Payment", logParameters = true)
     @ExecutionTime(operation = "PROCESS_PAYMENT_WITH_EVENT", warningThreshold = 1200, detailed = true)
     public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent, PaymentRequest paymentRequest, boolean publishEvent) {
@@ -90,6 +93,7 @@ public class PaymentService {
     }
 
     @Transactional
+    @Bulkhead(name = "kafka-processing", fallbackMethod = "processPaymentFromKafkaFallback", type = Bulkhead.Type.SEMAPHORE)
     @Auditable(operation = "PROCESS_PAYMENT_FROM_KAFKA", entityType = "Payment", logParameters = true)
     @ExecutionTime(operation = "PROCESS_PAYMENT_FROM_KAFKA", warningThreshold = 1200, detailed = true)
     public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent) {
@@ -145,5 +149,53 @@ public class PaymentService {
     @ExecutionTime(operation = "GET_ALL_PAYMENT_TRANSACTIONS", warningThreshold = 800)
     public List<PaymentTransaction> getAllTransactions() {
         return transactionRepository.findAll();
+    }
+
+    // Fallback methods for Bulkhead pattern
+    
+    /**
+     * Fallback method when payment processing bulkhead is full
+     */
+    private PaymentTransaction processPaymentFallback(TransactionEvent transactionEvent, PaymentRequest paymentRequest, Exception ex) {
+        log.error("Payment processing bulkhead full for transaction: {}. Error: {}", 
+                transactionEvent.getTransactionId(), ex.getMessage());
+        log.warn("Payment service at capacity - rejecting transaction {}", transactionEvent.getTransactionId());
+        
+        PaymentTransaction failedTransaction = new PaymentTransaction();
+        failedTransaction.setTransactionId(transactionEvent.getTransactionId());
+        failedTransaction.setAmount(transactionEvent.getTotalAmount());
+        failedTransaction.setMethod(paymentRequest.getPaymentMethod());
+        failedTransaction.setStatus("FAILED_CAPACITY");
+        
+        // Save the failed transaction for tracking
+        return transactionRepository.save(failedTransaction);
+    }
+
+    /**
+     * Fallback method when payment processing with event bulkhead is full
+     */
+    private PaymentTransaction processPaymentWithEventFallback(TransactionEvent transactionEvent, PaymentRequest paymentRequest, boolean publishEvent, Exception ex) {
+        log.error("Payment processing with event bulkhead full for transaction: {}. Error: {}", 
+                transactionEvent.getTransactionId(), ex.getMessage());
+        return processPaymentFallback(transactionEvent, paymentRequest, ex);
+    }
+
+    /**
+     * Fallback method when Kafka processing bulkhead is full
+     */
+    private PaymentTransaction processPaymentFromKafkaFallback(TransactionEvent transactionEvent, Exception ex) {
+        log.error("Kafka payment processing bulkhead full for transaction: {}. Error: {}", 
+                transactionEvent.getTransactionId(), ex.getMessage());
+        log.warn("Payment service Kafka processing at capacity - rejecting transaction {}", 
+                transactionEvent.getTransactionId());
+        
+        PaymentTransaction failedTransaction = new PaymentTransaction();
+        failedTransaction.setTransactionId(transactionEvent.getTransactionId());
+        failedTransaction.setAmount(transactionEvent.getTotalAmount());
+        failedTransaction.setMethod(PaymentMethod.CREDIT_CARD); // Default method
+        failedTransaction.setStatus("FAILED_CAPACITY_KAFKA");
+        
+        // Save the failed transaction for tracking and manual processing
+        return transactionRepository.save(failedTransaction);
     }
 }

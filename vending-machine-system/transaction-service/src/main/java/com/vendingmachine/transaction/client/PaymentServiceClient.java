@@ -2,6 +2,7 @@ package com.vendingmachine.transaction.client;
 
 import com.vendingmachine.transaction.transaction.dto.PaymentInfo;
 import com.vendingmachine.transaction.transaction.dto.PaymentMethod;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +20,7 @@ import java.util.Map;
 
 /**
  * Client for communicating with Payment Service.
- * Implements Circuit Breaker and Retry patterns for fault tolerance.
+ * Implements Circuit Breaker, Retry, and Bulkhead patterns for fault tolerance.
  */
 @Component
 @RequiredArgsConstructor
@@ -35,12 +36,14 @@ public class PaymentServiceClient {
     /**
      * Processes a payment through the payment service.
      * Uses Circuit Breaker to prevent cascading failures.
+     * Uses Bulkhead to limit concurrent payment processing.
      * 
      * @param transactionId Transaction ID
      * @param paymentInfo Payment information
      * @param amount Amount to charge
      * @return Payment response with status and details
      */
+    @Bulkhead(name = "payment-service", fallbackMethod = "processPaymentFallback", type = Bulkhead.Type.SEMAPHORE)
     @CircuitBreaker(name = "payment-service", fallbackMethod = "processPaymentFallback")
     @Retry(name = "payment-service")
     public Map<String, Object> processPayment(String transactionId, PaymentInfo paymentInfo, BigDecimal amount) {
@@ -81,7 +84,7 @@ public class PaymentServiceClient {
     }
 
     /**
-     * Fallback method when payment service is unavailable.
+     * Fallback method when payment service is unavailable or bulkhead is full.
      * Returns failed payment status to prevent incomplete transactions.
      * 
      * @param transactionId Transaction ID
@@ -96,8 +99,14 @@ public class PaymentServiceClient {
             BigDecimal amount, 
             Exception ex) {
         
-        log.error("Circuit breaker activated for payment processing. Transaction: {}, Error: {}", 
-                  transactionId, ex.getMessage());
+        if (ex.getClass().getName().contains("BulkheadFullException")) {
+            log.error("Bulkhead full for payment service. Transaction: {}", transactionId);
+            log.warn("Too many concurrent payment requests - rate limiting active");
+        } else {
+            log.error("Circuit breaker activated for payment processing. Transaction: {}, Error: {}", 
+                      transactionId, ex.getMessage());
+        }
+        
         log.warn("Payment service unavailable - failing transaction {}", transactionId);
 
         // Fail-safe: Return failed payment status
@@ -106,7 +115,9 @@ public class PaymentServiceClient {
             "success", false,
             "status", "FAILED",
             "transactionId", transactionId,
-            "reason", "Payment service temporarily unavailable",
+            "reason", ex.getClass().getName().contains("BulkheadFullException")
+                ? "Payment service at capacity - please retry"
+                : "Payment service temporarily unavailable",
             "fallback", true,
             "amount", amount
         );
@@ -119,6 +130,7 @@ public class PaymentServiceClient {
      * @param amount Amount to refund
      * @return Refund response
      */
+    @Bulkhead(name = "payment-service", fallbackMethod = "refundPaymentFallback", type = Bulkhead.Type.SEMAPHORE)
     @CircuitBreaker(name = "payment-service", fallbackMethod = "refundPaymentFallback")
     @Retry(name = "payment-service")
     public Map<String, Object> refundPayment(String transactionId, BigDecimal amount) {
@@ -156,8 +168,14 @@ public class PaymentServiceClient {
             BigDecimal amount, 
             Exception ex) {
         
-        log.error("Failed to process refund for transaction {}. Amount: {}. Error: {}", 
-                  transactionId, amount, ex.getMessage());
+        if (ex.getClass().getName().contains("BulkheadFullException")) {
+            log.error("Bulkhead full for payment refund service. Transaction: {}", transactionId);
+            log.warn("Too many concurrent refund requests - rate limiting active");
+        } else {
+            log.error("Failed to process refund for transaction {}. Amount: {}. Error: {}", 
+                      transactionId, amount, ex.getMessage());
+        }
+        
         log.error("CRITICAL: Manual refund processing required for transaction {}", transactionId);
         
         // Return failed status for manual intervention
@@ -166,7 +184,9 @@ public class PaymentServiceClient {
             "status", "FAILED",
             "transactionId", transactionId,
             "amount", amount,
-            "reason", "Refund service temporarily unavailable - manual processing required",
+            "reason", ex.getClass().getName().contains("BulkheadFullException")
+                ? "Refund service at capacity - please retry"
+                : "Refund service temporarily unavailable - manual processing required",
             "fallback", true
         );
     }

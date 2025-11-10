@@ -55,11 +55,11 @@
 
 **Tasks**:
 
-- [ ] Create feature branch: `feature/fault-tolerance`
-- [ ] Add Resilience4j dependencies to parent `pom.xml`
-- [ ] Add Spring AOP dependency
-- [ ] Update all service POMs to inherit new dependencies
-- [ ] Run `mvn clean install` to verify build
+- [x] Create feature branch: `feature/fault-tolerance`
+- [x] Add Resilience4j dependencies to parent `pom.xml`
+- [x] Add Spring AOP dependency
+- [x] Update all service POMs to inherit new dependencies
+- [x] Run `mvn clean install` to verify build
 
 **Deliverables**:
 
@@ -79,19 +79,19 @@
 
 **Transaction Service**:
 
-- [ ] Create `InventoryServiceClient` with circuit breaker
-- [ ] Create `PaymentServiceClient` with circuit breaker
-- [ ] Create `DispensingServiceClient` with circuit breaker
-- [ ] Add fallback methods for each client
-- [ ] Configure circuit breaker properties in `application.properties`
+- [x] Create `InventoryServiceClient` with circuit breaker
+- [x] Create `PaymentServiceClient` with circuit breaker
+- [x] Create `DispensingServiceClient` with circuit breaker
+- [x] Add fallback methods for each client
+- [x] Configure circuit breaker properties in `application.properties`
 
 **Configuration**:
 
-- [ ] Set `slidingWindowSize=10`
-- [ ] Set `failureRateThreshold=50`
-- [ ] Set `waitDurationInOpenState=10s` (inventory)
-- [ ] Set `waitDurationInOpenState=15s` (payment)
-- [ ] Set `waitDurationInOpenState=10s` (dispensing)
+- [x] Set `slidingWindowSize=10`
+- [x] Set `failureRateThreshold=50`
+- [x] Set `waitDurationInOpenState=10s` (inventory)
+- [x] Set `waitDurationInOpenState=15s` (payment)
+- [x] Set `waitDurationInOpenState=10s` (dispensing)
 
 **Deliverables**:
 
@@ -101,10 +101,10 @@
 
 **Testing**:
 
-- [ ] Unit tests for circuit breaker activation
-- [ ] Integration tests simulating service failures
-- [ ] Verify circuit opens after threshold failures
-- [ ] Verify circuit closes after recovery
+- [x] Unit tests for circuit breaker activation
+- [x] Integration tests simulating service failures
+- [x] Verify circuit opens after threshold failures
+- [x] Verify circuit closes after recovery
 
 **Success Metrics**:
 
