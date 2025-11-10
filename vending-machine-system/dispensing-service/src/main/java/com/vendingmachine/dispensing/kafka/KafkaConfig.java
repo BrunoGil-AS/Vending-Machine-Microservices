@@ -1,6 +1,7 @@
 package com.vendingmachine.dispensing.kafka;
 
 import com.vendingmachine.common.event.TransactionEvent;
+import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,13 +11,16 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
 @EnableKafka
+@RequiredArgsConstructor
 public class KafkaConfig {
 
     @Value("${spring.kafka.bootstrap-servers:localhost:9092}")
@@ -24,6 +28,8 @@ public class KafkaConfig {
 
     @Value("${spring.kafka.consumer.group-id:dispensing-service-group}")
     private String groupId;
+
+    private final KafkaErrorHandler kafkaErrorHandler;
 
     @Bean
     public ConsumerFactory<String, TransactionEvent> transactionEventConsumerFactory() {
@@ -42,6 +48,14 @@ public class KafkaConfig {
     public ConcurrentKafkaListenerContainerFactory<String, TransactionEvent> transactionEventKafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, TransactionEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(transactionEventConsumerFactory());
+        
+        // Configure error handler with DLQ support
+        DefaultErrorHandler errorHandler = new DefaultErrorHandler(
+                kafkaErrorHandler,
+                new FixedBackOff(1000L, 3) // 3 retries with 1 second delay
+        );
+        factory.setCommonErrorHandler(errorHandler);
+        
         return factory;
     }
 }

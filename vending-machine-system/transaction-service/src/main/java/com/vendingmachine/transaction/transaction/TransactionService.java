@@ -71,12 +71,28 @@ public class TransactionService {
         // Save transaction to get ID before processing payment
         Transaction savedTransaction = transactionRepository.save(transaction);
 
-        // Process payment synchronously with transaction ID
-        boolean paymentSuccess = processPayment(savedTransaction.getId(), paymentInfo, totalAmount);
-        if (!paymentSuccess) {
+        try {
+            // Process payment synchronously with transaction ID
+            boolean paymentSuccess = processPayment(savedTransaction.getId(), paymentInfo, totalAmount);
+            if (!paymentSuccess) {
+                // Payment failed but transaction should be saved for refund/audit purposes
+                savedTransaction.setStatus(TransactionStatus.FAILED);
+                transactionRepository.save(savedTransaction);
+                
+                log.warn("Payment failed for transaction {}, saved as FAILED for audit", savedTransaction.getId());
+                throw new PaymentFailedException("Payment processing failed - Service unavailable or insufficient funds");
+            }
+        } catch (PaymentFailedException e) {
+            // Re-throw payment exceptions
+            throw e;
+        } catch (Exception e) {
+            // Handle unexpected errors (like Jackson serialization errors)
             savedTransaction.setStatus(TransactionStatus.FAILED);
             transactionRepository.save(savedTransaction);
-            throw new PaymentFailedException("Payment processing failed - Service unavailable or insufficient funds");
+            
+            log.error("Unexpected error during payment processing for transaction {}: {}", 
+                     savedTransaction.getId(), e.getMessage(), e);
+            throw new PaymentFailedException("Payment processing failed - Technical error occurred");
         }
 
         // Calculate change for cash payments

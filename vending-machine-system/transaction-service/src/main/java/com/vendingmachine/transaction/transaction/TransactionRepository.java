@@ -15,4 +15,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByStatusOrderByCreatedAtDesc(TransactionStatus status);
 
     List<Transaction> findByStatusInAndCreatedAtBefore(List<TransactionStatus> statuses, LocalDateTime dateTime);
+    
+    List<Transaction> findByStatusAndCreatedAtAfter(TransactionStatus status, LocalDateTime dateTime);
 }

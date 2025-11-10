@@ -124,6 +124,50 @@ public class PaymentServiceClient {
     }
 
     /**
+     * Gets payment status for a transaction.
+     * 
+     * @param transactionId Transaction ID to check
+     * @return Payment status response
+     */
+    @Bulkhead(name = "payment-service", fallbackMethod = "getPaymentStatusFallback", type = Bulkhead.Type.SEMAPHORE)
+    @CircuitBreaker(name = "payment-service", fallbackMethod = "getPaymentStatusFallback")
+    @Retry(name = "payment-service")
+    public Map<String, Object> getPaymentStatus(String transactionId) {
+        log.debug("Checking payment status for transaction {}", transactionId);
+        
+        String url = paymentServiceUrl + "/api/payment/status/" + transactionId;
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Internal-Service", "transaction-service");
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+            url,
+            HttpMethod.GET,
+            entity,
+            new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+
+        log.debug("Payment status retrieved successfully for transaction {}", transactionId);
+        return response.getBody();
+    }
+
+    /**
+     * Fallback for payment status check failures.
+     */
+    private Map<String, Object> getPaymentStatusFallback(String transactionId, Exception ex) {
+        log.warn("Failed to check payment status for transaction {}: {}", transactionId, ex.getMessage());
+        
+        return Map.of(
+            "success", false,
+            "status", "UNKNOWN",
+            "transactionId", transactionId,
+            "reason", "Payment status service temporarily unavailable",
+            "fallback", true
+        );
+    }
+
+    /**
      * Refunds a payment.
      * 
      * @param transactionId Transaction ID to refund

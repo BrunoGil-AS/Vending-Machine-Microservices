@@ -79,6 +79,20 @@ public class PaymentController {
         }
     }
 
+    @GetMapping("/payment/status/{transactionId}")
+    @Auditable(operation = "CHECK_PAYMENT_STATUS", entityType = "Payment", logParameters = true, logResult = true)
+    @ExecutionTime(operation = "CHECK_PAYMENT_STATUS", warningThreshold = 500)
+    public ResponseEntity<Map<String, Object>> checkPaymentStatus(@PathVariable String transactionId) {
+        try {
+            CorrelationIdUtil.setCorrelationId(UUID.randomUUID().toString());
+            
+            Map<String, Object> status = paymentService.getPaymentStatusForTransaction(transactionId);
+            return ResponseEntity.ok(status);
+        } finally {
+            CorrelationIdUtil.clearCorrelationId();
+        }
+    }
+
     private PaymentResponse mapToResponse(PaymentTransaction transaction) {
         return new PaymentResponse(
                 transaction.getId(),

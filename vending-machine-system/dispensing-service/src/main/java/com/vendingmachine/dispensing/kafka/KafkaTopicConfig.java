@@ -23,4 +23,37 @@ public class KafkaTopicConfig {
                 .replicas(1)
                 .build();
     }
+
+    // Dead Letter Queue Topics
+    @Bean
+    public NewTopic dispensingEventsDlqTopic() {
+        return TopicBuilder.name("dispensing-events-dlq")
+                .partitions(1)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
+    public NewTopic transactionEventsDlqTopic() {
+        return TopicBuilder.name("transaction-events-dlq")
+                .partitions(1)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
+    public NewTopic paymentEventsDlqTopic() {
+        return TopicBuilder.name("payment-events-dlq")
+                .partitions(1)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
+    public NewTopic inventoryEventsDlqTopic() {
+        return TopicBuilder.name("inventory-events-dlq")
+                .partitions(1)
+                .replicas(1)
+                .build();
+    }
 }

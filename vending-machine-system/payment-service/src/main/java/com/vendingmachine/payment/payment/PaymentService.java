@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
@@ -149,6 +150,38 @@ public class PaymentService {
     @ExecutionTime(operation = "GET_ALL_PAYMENT_TRANSACTIONS", warningThreshold = 800)
     public List<PaymentTransaction> getAllTransactions() {
         return transactionRepository.findAll();
+    }
+
+    @ExecutionTime(operation = "GET_PAYMENT_STATUS_FOR_TRANSACTION", warningThreshold = 500)
+    public Map<String, Object> getPaymentStatusForTransaction(String transactionId) {
+        log.debug("Checking payment status for transaction: {}", transactionId);
+        
+        Optional<PaymentTransaction> paymentOpt = transactionRepository.findByTransactionId(Long.valueOf(transactionId));
+        
+        if (paymentOpt.isEmpty()) {
+            log.warn("No payment record found for transaction: {}", transactionId);
+            return Map.of(
+                "exists", false,
+                "status", "NOT_FOUND",
+                "transactionId", transactionId
+            );
+        }
+        
+        PaymentTransaction payment = paymentOpt.get();
+        
+        Map<String, Object> status = Map.of(
+            "exists", true,
+            "status", payment.getStatus(),
+            "success", "SUCCESS".equals(payment.getStatus()),
+            "transactionId", transactionId,
+            "amount", payment.getAmount(),
+            "method", payment.getMethod().name(),
+            "createdAt", payment.getCreatedAt(),
+            "updatedAt", payment.getUpdatedAt()
+        );
+        
+        log.debug("Payment status for transaction {}: {}", transactionId, payment.getStatus());
+        return status;
     }
 
     // Fallback methods for Bulkhead pattern
