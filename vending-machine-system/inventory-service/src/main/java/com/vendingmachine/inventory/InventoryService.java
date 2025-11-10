@@ -62,10 +62,17 @@ public class InventoryService {
     public Product addProduct(PostProductDTO product) {
         logger.info("Adding new product: {}", product.getName());
         Product newProduct = ProductUtils.convertToEntity(product);
+        
+        // Set default minThreshold if not provided
+        Integer minThreshold = product.getMinThreshold();
+        if (minThreshold == null) {
+            minThreshold = 5; // Default minimum threshold
+        }
+        
         Stock stock = Stock.builder()
                     .product(newProduct)
                     .quantity(product.getQuantity())
-                    .minThreshold(product.getMinThreshold())
+                    .minThreshold(minThreshold)
                     .build();
         newProduct.setStock(stock);
         productRepository.save(newProduct);
@@ -143,7 +150,13 @@ public class InventoryService {
         
         int previousQuantity = existingStock.getQuantity();
         existingStock.setQuantity(productDTO.getQuantity());
-        existingStock.setMinThreshold(productDTO.getMinThreshold());
+        
+        // Set default minThreshold if not provided
+        Integer minThreshold = productDTO.getMinThreshold();
+        if (minThreshold == null) {
+            minThreshold = existingStock.getMinThreshold() != null ? existingStock.getMinThreshold() : 5;
+        }
+        existingStock.setMinThreshold(minThreshold);
         
         // Save both entities
         Product updatedProduct = productRepository.save(existingProduct);
@@ -285,7 +298,14 @@ public class InventoryService {
         }
         int previousQuantity = existingStock.getQuantity();
         existingStock.setQuantity(stock.getQuantity());
-        existingStock.setMinThreshold(stock.getMinThreshold());
+        
+        // Set default minThreshold if not provided
+        Integer minThreshold = stock.getMinThreshold();
+        if (minThreshold == null) {
+            minThreshold = existingStock.getMinThreshold() != null ? existingStock.getMinThreshold() : 5;
+        }
+        existingStock.setMinThreshold(minThreshold);
+        
         Stock updatedStock = stockRepository.save(existingStock);
         logger.info("Stock details updated for product ID: {}. Previous quantity: {}, New quantity: {}, Min threshold: {}",
                    productId, previousQuantity, updatedStock.getQuantity(), updatedStock.getMinThreshold());

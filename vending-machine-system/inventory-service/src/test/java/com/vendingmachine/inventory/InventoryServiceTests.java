@@ -1,5 +1,6 @@
 package com.vendingmachine.inventory;
 
+import com.vendingmachine.inventory.config.TestKafkaConfig;
 import com.vendingmachine.inventory.product.Product;
 import com.vendingmachine.inventory.product.ProductRepository;
 import com.vendingmachine.inventory.product.dto.PostProductDTO;
@@ -9,12 +10,14 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
 
 @DataJpaTest
-@TestPropertySource(properties = {"spring.cloud.config.enabled=false"})
+@Import(TestKafkaConfig.class)
+@ActiveProfiles("test")
 public class InventoryServiceTests {
 
     @Autowired
@@ -30,6 +33,7 @@ public class InventoryServiceTests {
                 .price(1.5)
                 .description("Soda")
                 .quantity(20)
+                .minThreshold(5)  // Add minThreshold to prevent null issues
                 .build();
 
         // Convert to entity similarly to ProductUtils
@@ -46,7 +50,7 @@ public class InventoryServiceTests {
         Stock stock = Stock.builder()
                 .product(saved)
                 .quantity(dto.getQuantity())
-                .minThreshold(5)
+                .minThreshold(dto.getMinThreshold())
                 .build();
 
         Stock savedStock = stockRepository.save(stock);
@@ -58,6 +62,7 @@ public class InventoryServiceTests {
         Optional<Stock> byProduct = stockRepository.findByProductId(saved.getId());
         Assertions.assertTrue(byProduct.isPresent());
         Assertions.assertEquals(20, byProduct.get().getQuantity());
+        Assertions.assertEquals(5, byProduct.get().getMinThreshold());
         Assertions.assertEquals(saved.getId(), byProduct.get().getProduct().getId());
     }
 }

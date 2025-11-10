@@ -123,7 +123,7 @@ public class ProductController {
     @PostMapping("/admin/inventory/products")
     @Auditable(operation = "ADD_PRODUCT", entityType = "Product", logParameters = true, logResult = true)
     @ExecutionTime(operation = "Add Product", warningThreshold = 1500, detailed = true)
-    public Product addProduct(
+    public ResponseEntity<Product> addProduct(
             @RequestBody  PostProductDTO product,
             @RequestHeader(value = "X-Correlation-ID", required = false) String correlationId) {
         CorrelationIdUtil.setCorrelationId(correlationId);
@@ -131,7 +131,7 @@ public class ProductController {
             logger.info("Received request to add new product: {}", product.getName());
             Product newProduct = inventoryService.addProduct(product);
             logger.info("Product added successfully with ID: {}", newProduct.getId());
-            return newProduct;
+            return ResponseEntity.status(201).body(newProduct);
         } finally {
             CorrelationIdUtil.clearCorrelationId();
         }

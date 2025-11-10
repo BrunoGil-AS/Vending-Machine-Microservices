@@ -1,6 +1,7 @@
 package com.vendingmachine.inventory.product;
 
 import com.vendingmachine.inventory.InventoryService;
+import com.vendingmachine.inventory.kafka.KafkaProducerService;
 import com.vendingmachine.inventory.product.dto.PostProductDTO;
 import com.vendingmachine.inventory.stock.Stock;
 import com.vendingmachine.inventory.stock.StockRepository;
@@ -16,6 +17,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,6 +28,9 @@ public class ProductServiceTest {
 
     @Mock
     private StockRepository stockRepository;
+
+    @Mock
+    private KafkaProducerService kafkaProducerService;
 
     @InjectMocks
     private InventoryService inventoryService;
@@ -85,6 +90,7 @@ public class ProductServiceTest {
                 .price(1.50)
                 .description("Refresco")
                 .quantity(20)
+                .minThreshold(10)  // Add minThreshold to prevent null
                 .build();
 
         Product savedProduct = Product.builder()
@@ -98,7 +104,7 @@ public class ProductServiceTest {
                 .id(1L)
                 .product(savedProduct)
                 .quantity(dto.getQuantity())
-                .minThreshold(10)
+                .minThreshold(dto.getMinThreshold())
                 .build();
 
         savedProduct.setStock(savedStock);
@@ -116,10 +122,11 @@ public class ProductServiceTest {
         assertEquals(dto.getDescription(), result.getDescription());
         assertNotNull(result.getStock());
         assertEquals(dto.getQuantity(), result.getStock().getQuantity());
-        assertEquals(10, result.getStock().getMinThreshold());
+        assertEquals(dto.getMinThreshold(), result.getStock().getMinThreshold());
 
         verify(productRepository, times(1)).save(any(Product.class));
         verify(stockRepository, times(1)).save(any(Stock.class));
+        verify(kafkaProducerService, times(1)).send(anyString(), any()); // Verify Kafka events were sent (only stock update since quantity 20 > threshold 5)
     }
 
     @Test
@@ -159,6 +166,7 @@ public class ProductServiceTest {
 
         verify(stockRepository, times(1)).findByProductId(productId);
         verify(stockRepository, times(1)).save(any(Stock.class));
+        verify(kafkaProducerService, times(1)).send(anyString(), any()); // Verify Kafka event was sent
     }
 
     @Test

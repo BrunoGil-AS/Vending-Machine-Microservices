@@ -1,0 +1,24 @@
+{
+  "properties": [
+    {
+      "name": "application.gateway.identifier",
+      "type": "java.lang.String",
+      "description": "'Identifier for the application gateway."
+    },
+    {
+      "name": "spring.kafka.enabled",
+      "type": "java.lang.String",
+      "description": "Flag to enable or disable Kafka integration."
+    },
+    {
+      "name": "spring.security.enabled",
+      "type": "java.lang.String",
+      "description": "Flag to enable or disable Spring Security integration."
+    },
+    {
+      "name": "management.security.enabled",
+      "type": "java.lang.String",
+      "description": "Flag to enable or disable management security integration."
+    }
+  ]
+}

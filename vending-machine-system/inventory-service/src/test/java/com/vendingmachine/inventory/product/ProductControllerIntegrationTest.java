@@ -1,6 +1,7 @@
 package com.vendingmachine.inventory.product;
 
 import com.vendingmachine.inventory.InventoryServiceApplication;
+import com.vendingmachine.inventory.config.TestKafkaConfig;
 import com.vendingmachine.inventory.product.dto.PostProductDTO;
 import com.vendingmachine.inventory.stock.Stock;
 import com.vendingmachine.inventory.stock.StockRepository;
@@ -10,10 +11,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.ActiveProfiles;
 
 /**
  * Integration tests for the Product Controller endpoints.
@@ -36,8 +40,9 @@ import org.springframework.test.context.TestPropertySource;
  * @see com.vendingmachine.inventory.product.ProductController
  */
 @SpringBootTest(classes = InventoryServiceApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
- @TestPropertySource(properties = {"spring.cloud.config.enabled=false"})
- public class ProductControllerIntegrationTest {
+@Import({TestKafkaConfig.class})
+@ActiveProfiles("test")
+public class ProductControllerIntegrationTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
@@ -65,15 +70,41 @@ import org.springframework.test.context.TestPropertySource;
                 .price(1.25)
                 .description("Soda")
                 .quantity(15)
+                .minThreshold(5)  // Add minThreshold to prevent null issues
                 .build();
 
-        ResponseEntity<Product> postResponse = restTemplate.postForEntity(
-                baseUrl() + "/admin/inventory/products", 
-                dto, 
-                Product.class);
+        // Create headers for admin access
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Internal-Service", "TEST_GATEWAY_ID");
+        headers.set("X-User-Role", "ADMIN");
+        headers.set("X-User-Id", "1");
+        headers.set("X-Username", "testuser");
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        
+        HttpEntity<PostProductDTO> entity = new HttpEntity<>(dto, headers);
 
-        Assertions.assertEquals(200, postResponse.getStatusCode().value());
-        Product created = postResponse.getBody();
+        ResponseEntity<Product> postResponse;
+        Product created;
+        
+        try {
+            postResponse = restTemplate.postForEntity(
+                    baseUrl() + "/admin/inventory/products", 
+                    entity, 
+                    Product.class);
+        } catch (Exception e) {
+            // Try to get the actual response as String to see what we're getting
+            ResponseEntity<String> errorResponse = restTemplate.postForEntity(
+                    baseUrl() + "/admin/inventory/products", 
+                    entity, 
+                    String.class);
+            
+            System.out.println("Error response status: " + errorResponse.getStatusCode());
+            System.out.println("Error response body: " + errorResponse.getBody());
+            throw e;
+        }
+
+        Assertions.assertEquals(201, postResponse.getStatusCode().value());
+        created = postResponse.getBody();
         Assertions.assertNotNull(created);
         Assertions.assertNotNull(created.getId());
         Assertions.assertEquals(dto.getName(), created.getName());
@@ -84,12 +115,21 @@ import org.springframework.test.context.TestPropertySource;
         Stock stock = stockRepository.findByProductId(created.getId()).orElse(null);
         Assertions.assertNotNull(stock);
         Assertions.assertEquals(15, stock.getQuantity());
+        Assertions.assertEquals(5, stock.getMinThreshold());
         Assertions.assertEquals(created.getId(), stock.getProduct().getId());
-        Assertions.assertNotNull(stock.getMinThreshold());
 
         // availability endpoint
-        ResponseEntity<Stock> avail = restTemplate.getForEntity(
-                baseUrl() + "/inventory/availability/" + created.getId(), 
+        HttpHeaders getHeaders = new HttpHeaders();
+        getHeaders.set("X-Internal-Service", "TEST_GATEWAY_ID");
+        getHeaders.set("X-User-Id", "1");
+        getHeaders.set("X-User-Role", "ADMIN");
+        getHeaders.set("X-Username", "testuser");
+        HttpEntity<String> getEntity = new HttpEntity<>(getHeaders);
+        
+        ResponseEntity<Stock> avail = restTemplate.exchange(
+                baseUrl() + "/inventory/availability/" + created.getId(),
+                HttpMethod.GET,
+                getEntity,
                 Stock.class);
         
         Assertions.assertEquals(200, avail.getStatusCode().value());
@@ -126,7 +166,15 @@ import org.springframework.test.context.TestPropertySource;
                 .minThreshold(2)
                 .build();
         
-        HttpEntity<Stock> entity = new HttpEntity<>(update);
+        // Create headers for admin access
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Internal-Service", "TEST_GATEWAY_ID");
+        headers.set("X-User-Role", "ADMIN");
+        headers.set("X-User-Id", "1");
+        headers.set("X-Username", "testuser");
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        
+        HttpEntity<Stock> entity = new HttpEntity<>(update, headers);
         ResponseEntity<Stock> resp = restTemplate.exchange(
                 baseUrl() + "/admin/inventory/stock/" + saved.getId(),
                 HttpMethod.PUT,

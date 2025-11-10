@@ -1,5 +1,6 @@
 package com.vendingmachine.inventory;
 
+import com.vendingmachine.inventory.kafka.KafkaProducerService;
 import com.vendingmachine.inventory.product.Product;
 import com.vendingmachine.inventory.product.ProductRepository;
 import com.vendingmachine.inventory.product.dto.PostProductDTO;
@@ -25,6 +26,9 @@ public class InventoryServiceUnitTest {
     @Mock
     private StockRepository stockRepository;
 
+    @Mock
+    private KafkaProducerService kafkaProducerService;
+
     @InjectMocks
     private InventoryService inventoryService;
 
@@ -40,6 +44,7 @@ public class InventoryServiceUnitTest {
                 .price(2.0)
                 .description("Orange")
                 .quantity(12)
+                .minThreshold(5)  // Add minThreshold to prevent null
                 .build();
 
         // simulate repository behavior: when saving product assign an id
@@ -61,6 +66,7 @@ public class InventoryServiceUnitTest {
         Assertions.assertEquals(100L, result.getId());
         Assertions.assertNotNull(result.getStock());
         Assertions.assertEquals(12, result.getStock().getQuantity());
+        Assertions.assertEquals(5, result.getStock().getMinThreshold());
 
         ArgumentCaptor<Stock> stockCaptor = ArgumentCaptor.forClass(Stock.class);
         verify(stockRepository, times(1)).save(stockCaptor.capture());
@@ -68,6 +74,9 @@ public class InventoryServiceUnitTest {
         // the stock should reference the saved product
         Assertions.assertNotNull(savedStock.getProduct());
         Assertions.assertEquals(100L, savedStock.getProduct().getId());
+        
+        // Verify Kafka producer was called (only once for stock update event since quantity 20 is above threshold 5)
+        verify(kafkaProducerService, times(1)).send(anyString(), any());
     }
 
     @Test
@@ -84,6 +93,10 @@ public class InventoryServiceUnitTest {
 
         Assertions.assertNotNull(updated);
         Assertions.assertEquals(77, updated.getQuantity());
+        Assertions.assertEquals(5, updated.getMinThreshold());
         Assertions.assertEquals(p, updated.getProduct());
+        
+        // Verify Kafka producer was called
+        verify(kafkaProducerService, times(1)).send(anyString(), any());
     }
 }
