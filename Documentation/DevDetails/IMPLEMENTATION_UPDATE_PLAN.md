@@ -8,20 +8,6 @@
 
 ---
 
-## Table of Contents
-
-1. [Overview](#overview)
-2. [Phase 1: Critical Fault Tolerance](#phase-1-critical-fault-tolerance-weeks-1-2)
-3. [Phase 2: Refund System](#phase-2-refund-system-weeks-3-4)
-4. [Phase 3: Kafka Optimization](#phase-3-kafka-optimization-weeks-5-6)
-5. [Phase 4: Saga Pattern](#phase-4-saga-pattern-weeks-7-8)
-6. [Phase 5: Monitoring & Observability](#phase-5-monitoring--observability-weeks-9-10)
-7. [Risk Management](#risk-management)
-8. [Success Criteria](#success-criteria)
-9. [Rollback Strategy](#rollback-strategy)
-
----
-
 ## Overview
 
 ### Goals
@@ -39,6 +25,15 @@
 3. **Testing First** - Comprehensive tests before production deployment
 4. **Metrics Driven** - Measure before/after for each phase
 5. **Rollback Ready** - Ability to revert any phase within 30 minutes
+
+### 🚨 **STRATEGIC DECISION: Kafka Optimization FIRST**
+
+**Reasoning**:
+
+- Refund system depends on reliable messaging infrastructure
+- Kafka optimization reduces latency from 1000ms → 300ms
+- Simplified architecture (5 topics → 1 topic) easier to debug
+- Foundation for all subsequent messaging-based features
 
 ---
 
@@ -120,10 +115,10 @@
 
 **Tasks**:
 
-- [ ] Add `@Retry` annotations to all HTTP client methods
-- [ ] Configure exponential backoff multiplier (2x)
-- [ ] Set retry exceptions (ConnectException, ResourceAccessException)
-- [ ] Configure different retry counts per service:
+- [x] Add `@Retry` annotations to all HTTP client methods
+- [x] Configure exponential backoff multiplier (2x)
+- [x] Set retry exceptions (ConnectException, ResourceAccessException)
+- [x] Configure different retry counts per service:
   - Inventory: 3 retries
   - Payment: 3 retries
   - Dispensing: 2 retries
@@ -135,9 +130,9 @@
 
 **Testing**:
 
-- [ ] Verify retry attempts with delays
-- [ ] Ensure retries stop after max attempts
-- [ ] Test exponential backoff timing
+- [x] Verify retry attempts with delays
+- [x] Ensure retries stop after max attempts
+- [x] Test exponential backoff timing
 
 ---
 
@@ -145,11 +140,11 @@
 
 **Tasks**:
 
-- [ ] Create DLQ topic in `KafkaTopicConfig`
-- [ ] Implement `KafkaErrorHandler` class
-- [ ] Configure error handler in consumer factories
-- [ ] Update all `@KafkaListener` with error handling
-- [ ] Create `FailedEvent` entity for database persistence
+- [x] Create DLQ topic in `KafkaTopicConfig`
+- [x] Implement `KafkaErrorHandler` class
+- [x] Configure error handler in consumer factories
+- [x] Update all `@KafkaListener` with error handling
+- [x] Create `FailedEvent` entity for database persistence
 
 **Deliverables**:
 
@@ -159,30 +154,31 @@
 
 **Testing**:
 
-- [ ] Force consumer exception, verify DLQ routing
-- [ ] Verify failed events saved to database
-- [ ] Test manual replay from DLQ
+- [x] Force consumer exception, verify DLQ routing
+- [x] Verify failed events saved to database
+- [x] Test manual replay from DLQ
 
 ---
 
-#### Day 5: Health Indicators & Testing
+#### Day 5: Health Indicators & Database Optimization
 
 **Tasks**:
 
-- [ ] Create `DatabaseHealthIndicator`
-- [ ] Create `KafkaHealthIndicator`
-- [ ] Create `CircuitBreakerHealthIndicator`
-- [ ] Add custom metrics to actuator endpoints
-- [ ] Run comprehensive integration tests
+- [ ] Create `DatabaseHealthIndicator` (requires actuator fix)
+- [ ] Create `KafkaHealthIndicator` (requires actuator fix)
+- [ ] Create `CircuitBreakerHealthIndicator` (requires actuator fix)
+- [x] Add HikariCP optimized configuration
+- [x] Run comprehensive integration tests
 
 **Deliverables**:
 
-- ✅ Health checks at `/actuator/health`
+- ⚠️ Health checks at `/actuator/health` (partially complete)
+- ✅ Database connection pool optimized
 - ✅ All tests passing
 
 **Testing**:
 
-- [ ] Full end-to-end purchase flow
+- [x] Full end-to-end purchase flow
 - [ ] Chaos testing (kill services randomly)
 - [ ] Load testing (100 concurrent transactions)
 
@@ -214,187 +210,14 @@
 
 ---
 
-## Phase 2: Refund System (Weeks 3-4)
+## Phase 2: Kafka Optimization (Weeks 3-4) ⚡ **PRIORITIZED**
 
-**Priority**: 🟠 **HIGH**  
-**Estimated Effort**: 80 hours  
-**Team**: 2 developers  
-**Risk Level**: Medium
-
-### Week 3: Refund Entity & Core Service
-
-#### Day 1-2: Database Schema & Entity
-
-**Tasks**:
-
-- [ ] Create feature branch: `feature/refund-system`
-- [ ] Design `refunds` table schema
-- [ ] Create `Refund` entity class with all fields:
-  - id, refundId, transactionId, originalPaymentId
-  - refundAmount, originalAmount
-  - refundType (FULL/PARTIAL), status, reason
-  - timestamps, initiatedBy, retryCount
-- [ ] Create `RefundRepository` with custom queries
-- [ ] Add database migration script
-- [ ] Update `PaymentTransaction` entity with refund relationship
-
-**Deliverables**:
-
-- ✅ Refund entity created
-- ✅ Database migration tested
-- ✅ Repository with custom queries
-
-**Testing**:
-
-- [ ] Schema creation tests
-- [ ] Repository CRUD tests
-- [ ] Query performance tests
-
----
-
-#### Day 3-5: Refund Service Implementation
-
-**Tasks**:
-
-- [ ] Create `RefundService` class
-- [ ] Implement `processRefund()` method with idempotency
-- [ ] Implement `executeRefund()` method with retry
-- [ ] Implement `refundTransaction()` helper method
-- [ ] Add validation logic:
-  - Check original payment exists
-  - Check original payment is COMPLETED
-  - Check refund amount validity
-  - Check total refunded doesn't exceed original
-- [ ] Implement `RefundException` custom exception
-- [ ] Create `PaymentGatewayClient` interface for refunds
-
-**Deliverables**:
-
-- ✅ RefundService with full business logic
-- ✅ Idempotency guaranteed
-- ✅ Validation rules implemented
-
-**Testing**:
-
-- [ ] Idempotency tests (same refundId twice)
-- [ ] Validation tests (invalid amounts, non-existent payments)
-- [ ] Partial refund tests
-- [ ] Full refund tests
-
----
-
-### Week 4: Compensation & Recovery
-
-#### Day 1-2: Compensation Strategies
-
-**Tasks**:
-
-- [ ] Create `CompensationStrategy` service
-- [ ] Implement `compensateDispensingFailure()` method
-- [ ] Implement `compensatePartialDispensing()` method
-- [ ] Implement `compensateTimeout()` method
-- [ ] Update `TransactionService` to use compensations
-- [ ] Add compensation tracking to Transaction entity
-
-**Deliverables**:
-
-- ✅ Compensation strategies for all failure scenarios
-- ✅ Integration with transaction flow
-
-**Testing**:
-
-- [ ] Test dispensing failure compensation
-- [ ] Test partial dispensing compensation
-- [ ] Test timeout compensation
-- [ ] End-to-end failure recovery tests
-
----
-
-#### Day 3-4: Automated Recovery
-
-**Tasks**:
-
-- [ ] Create `RefundRecoveryService` scheduled jobs
-- [ ] Implement `retryFailedRefunds()` job (every 15 min)
-- [ ] Implement `monitorStuckRefunds()` job (every 30 min)
-- [ ] Create `AlertService` for admin notifications
-- [ ] Add repository queries for failed/stuck refunds
-- [ ] Configure Spring Scheduler
-
-**Deliverables**:
-
-- ✅ Background jobs running
-- ✅ Admin alerts configured
-
-**Testing**:
-
-- [ ] Test failed refund retry
-- [ ] Test stuck refund detection
-- [ ] Test alert triggering
-
----
-
-#### Day 5: API Endpoints & Testing
-
-**Tasks**:
-
-- [ ] Create `RefundController` with endpoints:
-  - POST `/api/admin/refunds` - Initiate refund
-  - GET `/api/admin/refunds/{id}` - Get refund status
-  - GET `/api/admin/refunds/transaction/{transactionId}` - List refunds
-- [ ] Add JWT authorization (ADMIN role only)
-- [ ] Add request/response DTOs
-- [ ] Add validation annotations
-- [ ] Integration testing
-
-**Deliverables**:
-
-- ✅ REST API for refunds
-- ✅ Admin authorization
-
-**Testing**:
-
-- [ ] API endpoint tests
-- [ ] Authorization tests
-- [ ] Full refund workflow tests
-
----
-
-### Phase 2 Deployment
-
-**Pre-Deployment Checklist**:
-
-- [ ] Database migration tested
-- [ ] All tests passing
-- [ ] API documentation updated
-- [ ] Admin team trained on new endpoints
-- [ ] Monitoring dashboards created
-
-**Deployment Steps**:
-
-1. Run database migration in staging
-2. Deploy services to staging
-3. Test refund workflows manually
-4. Run production migration (off-peak hours)
-5. Deploy to production
-6. Monitor refund processing for 48 hours
-
-**Rollback Trigger**:
-
-- Refund processing failures > 10%
-- Database migration issues
-- Double refund incidents
-
----
-
-## Phase 3: Kafka Optimization (Weeks 5-6)
-
-**Priority**: 🟡 **MEDIUM**  
+**Priority**: � **HIGH**  
 **Estimated Effort**: 100 hours  
 **Team**: 3 developers  
 **Risk Level**: High
 
-### Week 5: Domain Event Model & Topic Consolidation
+### Week 3: Domain Event Model & Topic Consolidation
 
 #### Day 1-2: DomainEvent Model
 
@@ -446,7 +269,7 @@
 
 ---
 
-### Week 6: Consumer Migration & Sync HTTP
+### Week 4: Consumer Migration & Sync HTTP
 
 #### Day 1-3: Event Consumer Refactoring
 
@@ -500,41 +323,14 @@
 - [ ] Test failure scenarios with circuit breakers
 - [ ] Load testing (200 concurrent transactions)
 
----
+### Phase 2 Deployment (Gradual Migration)
 
-### Week 6 (Continued): Redis Deduplication
-
-#### Tasks
-
-- [ ] Add Redis dependencies to services
-- [ ] Create `EventDeduplicationService` with two-tier check
-- [ ] Integrate with all Kafka consumers
-- [ ] Configure Redis connection settings
-- [ ] Implement cache warming on startup
-- [ ] Add health check for Redis
-
-**Deliverables**:
-
-- ✅ Redis-based deduplication active
-- ✅ Database queries reduced by 95%
-
-**Testing**:
-
-- [ ] Test duplicate event detection
-- [ ] Test cache hit/miss scenarios
-- [ ] Performance testing (verify 60%+ improvement)
-
----
-
-### Phase 3 Deployment (Gradual Migration)
-
-**Week 5 Deployment**: New topic + dual publishing
-**Week 6 Deployment**: Consumer migration + sync HTTP
+**Week 3 Deployment**: New topic + dual publishing
+**Week 4 Deployment**: Consumer migration + sync HTTP
 
 **Pre-Deployment Checklist**:
 
 - [ ] All services updated with new event model
-- [ ] Redis cluster configured
 - [ ] Performance benchmarks documented
 - [ ] Rollback to old topics tested
 
@@ -553,7 +349,44 @@
 - Event loss detected
 - Consumer lag > 10 seconds
 - Transaction latency increase > 20%
-- Redis failures
+
+---
+
+## Phase 3: Refund System (Weeks 5-6) 💰 **DEPENDS ON KAFKA**
+
+**Priority**: 🟡 **MEDIUM**  
+**Estimated Effort**: 80 hours  
+**Team**: 2 developers  
+**Risk Level**: Medium
+
+### Week 5: Refund Entity & Core Service
+
+#### Day 1-2: Database Schema & Entity
+
+**Tasks**:
+
+- [ ] Create feature branch: `feature/refund-system`
+- [ ] Design `refunds` table schema
+- [ ] Create `Refund` entity class with all fields:
+  - id, refundId, transactionId, originalPaymentId
+  - refundAmount, originalAmount
+  - refundType (FULL/PARTIAL), status, reason
+  - timestamps, initiatedBy, retryCount
+- [ ] Create `RefundRepository` with custom queries
+- [ ] Add database migration script
+- [ ] Update `PaymentTransaction` entity with refund relationship
+
+**Deliverables**:
+
+- ✅ Refund entity created
+- ✅ Database migration tested
+- ✅ Repository with custom queries
+
+**Testing**:
+
+- [ ] Schema creation tests
+- [ ] Repository CRUD tests
+- [ ] Query performance tests
 
 ---
 

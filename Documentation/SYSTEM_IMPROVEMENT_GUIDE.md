@@ -5,7 +5,7 @@
 1. [Fault Tolerance Enhancement](#1-fault-tolerance-enhancement)
 2. [Kafka Layer Optimization](#2-kafka-layer-optimization)
 3. [Compensatory Actions & Refund Implementation](#3-compensatory-actions--refund-implementation)
-4. [Implementation Roadmap](#4-implementation-roadmap)
+4. [Implementation Roadmap](#4-implementation-roadmap---revised-order)
 
 ---
 
@@ -1399,7 +1399,7 @@ public class CompensationStrategy {
 
 ---
 
-## 4. Implementation Roadmap
+## 4. Implementation Roadmap - REVISED ORDER
 
 ### Phase 1: Critical Fault Tolerance (Week 1-2)
 
@@ -1409,7 +1409,16 @@ public class CompensationStrategy {
 4. ✅ Add health indicators for all critical dependencies
 5. ✅ Implement Kafka error handlers and DLQ
 
-### Phase 2: Refund System (Week 3-4)
+### Phase 2: Kafka Optimization (Week 3-4) ⚡ **PRIORITIZED**
+
+1. ✅ Create unified DomainEvent model
+2. ✅ Consolidate topics to domain-centric architecture (5 topics → 1 topic)
+3. ✅ Migrate synchronous operations from Kafka to HTTP
+4. ✅ Implement event type-based routing
+5. ✅ Add Redis-based event deduplication
+6. ✅ Deploy DLQ for failed events
+
+### Phase 3: Refund System (Week 5-6) 💰 **DEPENDS ON KAFKA**
 
 1. ✅ Create Refund entity and repository
 2. ✅ Implement RefundService with idempotency
@@ -1417,15 +1426,6 @@ public class CompensationStrategy {
 4. ✅ Create compensation strategies for different failure scenarios
 5. ✅ Implement automated refund recovery job
 6. ✅ Add refund API endpoints with admin authorization
-
-### Phase 3: Kafka Optimization (Week 5-6)
-
-1. ✅ Create unified DomainEvent model
-2. ✅ Consolidate topics to domain-centric architecture
-3. ✅ Migrate synchronous operations from Kafka to HTTP
-4. ✅ Implement event type-based routing
-5. ✅ Add Redis-based event deduplication
-6. ✅ Deploy DLQ for failed events
 
 ### Phase 4: Saga Pattern (Week 7-8)
 
