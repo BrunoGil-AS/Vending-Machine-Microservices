@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.vendingmachine.common.event.PaymentEvent;
+import com.vendingmachine.common.event.DomainEvent;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -39,6 +40,24 @@ public class KafkaConfig {
     @Bean
     public KafkaTemplate<String, PaymentEvent> paymentEventKafkaTemplate() {
         return new KafkaTemplate<>(paymentEventProducerFactory());
+    }
+
+    // Unified Event Configuration for Phase 2 Kafka Optimization
+    @Bean
+    public ProducerFactory<String, DomainEvent> domainEventProducerFactory() {
+        Map<String, Object> configProps = new HashMap<>();
+        configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        configProps.put(ProducerConfig.RETRIES_CONFIG, 3);
+        configProps.put(ProducerConfig.ACKS_CONFIG, "all");
+        configProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        return new DefaultKafkaProducerFactory<>(configProps);
+    }
+
+    @Bean
+    public KafkaTemplate<String, DomainEvent> kafkaTemplate() {
+        return new KafkaTemplate<>(domainEventProducerFactory());
     }
 
     @Bean
