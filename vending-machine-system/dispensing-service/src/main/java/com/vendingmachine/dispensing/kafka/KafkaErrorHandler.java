@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.listener.ConsumerRecordRecoverer;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,7 @@ import java.util.UUID;
 public class KafkaErrorHandler implements ConsumerRecordRecoverer {
 
     private final FailedEventRepository failedEventRepository;
+    @Qualifier("dlqKafkaProducer")
     private final KafkaProducer<String, Object> kafkaProducer;
     private final ObjectMapper objectMapper;
 

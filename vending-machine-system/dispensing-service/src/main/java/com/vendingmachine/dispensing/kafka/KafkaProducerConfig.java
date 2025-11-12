@@ -1,6 +1,5 @@
 package com.vendingmachine.dispensing.kafka;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vendingmachine.common.event.DispensingEvent;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -48,10 +47,5 @@ public class KafkaProducerConfig {
         props.put(ProducerConfig.ACKS_CONFIG, "all");
         
         return new KafkaProducer<>(props);
-    }
-
-    @Bean
-    public ObjectMapper objectMapper() {
-        return new ObjectMapper();
     }
 }

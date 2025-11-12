@@ -13,15 +13,15 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
+@Service("disabled-transaction-event-consumer")
 @RequiredArgsConstructor
 @Slf4j
 public class TransactionEventConsumer {
 
     private final PaymentService paymentService;
 
-    @KafkaListener(topics = "transaction-events", groupId = "payment-service-group",
-                   containerFactory = "transactionEventKafkaListenerContainerFactory")
+    // @KafkaListener(topics = "transaction-events", groupId = "payment-service-group",
+    //                containerFactory = "transactionEventKafkaListenerContainerFactory")
     @Transactional
     @Auditable(operation = "CONSUME_TRANSACTION_EVENT", entityType = "TransactionEvent", logParameters = true)
     @ExecutionTime(operation = "CONSUME_TRANSACTION_EVENT", warningThreshold = 2000)
