@@ -2,23 +2,18 @@ package com.vendingmachine.dispensing.dispensing;
 
 import com.vendingmachine.common.aop.annotation.Auditable;
 import com.vendingmachine.common.aop.annotation.ExecutionTime;
-import com.vendingmachine.common.event.DispensingEvent;
-import com.vendingmachine.common.util.CorrelationIdUtil;
 import com.vendingmachine.dispensing.exception.HardwareException;
+import com.vendingmachine.dispensing.kafka.DispensingKafkaEventService;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import static com.vendingmachine.dispensing.dispensing.SimulationConfig.SimulationConstants.*;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.messaging.Message;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Random;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +22,7 @@ public class DispensingService {
 
     private final DispensingOperationRepository dispensingRepository;
     private final HardwareStatusService hardwareStatusService;
-    private final KafkaTemplate<String, DispensingEvent> kafkaTemplate;
+    private final DispensingKafkaEventService dispensingKafkaEventService;
 
     @Value(DISPENSING_SIMULATION_SUCCESS_RATE)
     private double successRate;
@@ -40,9 +35,6 @@ public class DispensingService {
 
     @Value(DISPENSING_SIMULATION_VERIFICATION_RATE)
     private double verificationSuccessRate;
-
-    @Value(SPRING_KAFKA_TOPIC_DISPENSING_EVENTS_DEFAULT)
-    private String dispensingEventsTopic;
 
     private final Random random = new Random();
 
@@ -139,21 +131,10 @@ public class DispensingService {
     @Auditable(operation = "PUBLISH_DISPENSING_EVENT", entityType = "DispensingEvent", logParameters = true)
     @ExecutionTime(operation = "PUBLISH_DISPENSING_EVENT", warningThreshold = 1000)
     private void publishDispensingEvent(DispensingOperation dispensing) {
-        DispensingEvent event = new DispensingEvent();
-        event.setEventId(UUID.randomUUID().toString());
-        event.setTransactionId(dispensing.getTransactionId());
-        event.setProductId(dispensing.getProductId());
-        event.setQuantity(dispensing.getQuantity());
-        event.setStatus(dispensing.getStatus()); // SUCCESS or FAILED
-        event.setTimestamp(System.currentTimeMillis());
-
-        Message<DispensingEvent> message = MessageBuilder
-            .withPayload(event)
-            .setHeader("X-Correlation-ID", CorrelationIdUtil.getCorrelationId())
-            .build();
-
-        kafkaTemplate.send(dispensingEventsTopic, event.getEventId(), message.getPayload());
-        log.info("Published dispensing event: {}", event);
+        // Use enhanced service with complete payload data for unified topic
+        dispensingKafkaEventService.publishDispensingEventWithCompleteData(dispensing, dispensing.getStatus());
+        log.info("Published dispensing event with complete data: transaction {}, status {}, product {}", 
+                dispensing.getTransactionId(), dispensing.getStatus(), dispensing.getProductId());
     }
 
     @Bulkhead(name = "database-operations", fallbackMethod = "getAllDispensingTransactionsFallback", type = Bulkhead.Type.SEMAPHORE)

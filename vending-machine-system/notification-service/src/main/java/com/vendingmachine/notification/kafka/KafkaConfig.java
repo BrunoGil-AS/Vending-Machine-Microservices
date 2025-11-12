@@ -25,6 +25,36 @@ public class KafkaConfig {
     @Value("${spring.kafka.consumer.group-id:notification-service-group}")
     private String groupId;
 
+    // ============================================
+    // UNIFIED DOMAIN EVENT CONSUMER (NEW)
+    // ============================================
+    
+    @Bean
+    public ConsumerFactory<String, DomainEvent> domainEventConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-service-unified-group");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
+        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, DomainEvent.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+        return new DefaultKafkaConsumerFactory<>(props);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, DomainEvent> domainEventKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, DomainEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(domainEventConsumerFactory());
+        factory.setConcurrency(3); // Match topic partitions
+        return factory;
+    }
+
+    // ============================================
+    // LEGACY EVENT CONSUMERS (MAINTAIN FOR NOW)
+    // ============================================
+
     @Bean
     public ConsumerFactory<String, LowStockAlertEvent> lowStockAlertConsumerFactory() {
         Map<String, Object> props = new HashMap<>();

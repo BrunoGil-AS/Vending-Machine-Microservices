@@ -1,7 +1,6 @@
 package com.vendingmachine.inventory.config;
 
-import com.vendingmachine.common.event.StockUpdateEvent;
-import com.vendingmachine.inventory.kafka.KafkaProducerService;
+import com.vendingmachine.inventory.kafka.InventoryKafkaEventService;
 import com.vendingmachine.inventory.product.Product;
 import com.vendingmachine.inventory.product.ProductRepository;
 import com.vendingmachine.inventory.product.dto.PostProductDTO;
@@ -16,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -26,7 +24,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private final ProductRepository productRepository;
     private final StockRepository stockRepository;
-    private final KafkaProducerService kafkaProducerService;
+    private final InventoryKafkaEventService inventoryKafkaEventService;
 
     @Override
     @Transactional
@@ -64,17 +62,10 @@ public class DataInitializer implements CommandLineRunner {
                 stockRepository.save(stock);
                 loaded++;
 
-                // Publish stock update event to Kafka
-                StockUpdateEvent stockEvent = new StockUpdateEvent(
-                        UUID.randomUUID().toString(),
-                        product.getId(),
-                        stock.getQuantity(),
-                        "INITIAL_LOAD",
-                        System.currentTimeMillis()
-                );
-                kafkaProducerService.send("stock-update-events", stockEvent);
+                // Publish stock update event with complete data using enhanced service
+                inventoryKafkaEventService.publishStockUpdateEventWithCompleteData(stock, "INITIAL_STOCK");
 
-                log.debug("Loaded product: {} with stock: {} and published stock event", 
+                log.debug("Loaded product: {} with stock: {} and published enhanced stock event", 
                          product.getName(), stock.getQuantity());
             }
 

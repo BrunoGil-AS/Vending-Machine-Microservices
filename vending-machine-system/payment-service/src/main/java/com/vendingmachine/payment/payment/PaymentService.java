@@ -2,17 +2,13 @@ package com.vendingmachine.payment.payment;
 
 import com.vendingmachine.common.aop.annotation.Auditable;
 import com.vendingmachine.common.aop.annotation.ExecutionTime;
-import com.vendingmachine.common.event.PaymentEvent;
 import com.vendingmachine.common.event.TransactionEvent;
-import com.vendingmachine.common.util.CorrelationIdUtil;
+import com.vendingmachine.payment.kafka.PaymentKafkaEventService;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import static com.vendingmachine.payment.payment.SimulationConfig.SimulationConstants.*;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.messaging.Message;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -29,16 +24,13 @@ import java.util.UUID;
 public class PaymentService {
 
     private final PaymentTransactionRepository transactionRepository;
-    private final KafkaTemplate<String, PaymentEvent> kafkaTemplate;
+    private final PaymentKafkaEventService paymentKafkaEventService;
 
     @Value(PAYMENT_SIMULATION_SUCCESS_RATE)
     private double successRate;
 
     @Value(PAYMENT_SIMULATION_ENABLED_DEFAULT)
     private boolean simulationEnabled;
-
-    @Value(SPRING_KAFKA_TOPIC_PAYMENT_EVENTS_DEFAULT)
-    private String paymentEventsTopic;
 
     private final Random random = new Random();
 
@@ -130,21 +122,10 @@ public class PaymentService {
     @Auditable(operation = "PUBLISH_PAYMENT_EVENT", entityType = "PaymentEvent", logParameters = true)
     @ExecutionTime(operation = "PUBLISH_PAYMENT_EVENT", warningThreshold = 1000)
     private void publishPaymentEvent(PaymentTransaction transaction) {
-        PaymentEvent event = new PaymentEvent();
-        event.setEventId(UUID.randomUUID().toString());
-        event.setTransactionId(transaction.getTransactionId());
-        event.setAmount(transaction.getAmount());
-        event.setMethod(transaction.getMethod().name());
-        event.setStatus(transaction.getStatus());
-        event.setTimestamp(System.currentTimeMillis());
-
-        Message<PaymentEvent> message = MessageBuilder
-            .withPayload(event)
-            .setHeader("X-Correlation-ID", CorrelationIdUtil.getCorrelationId())
-            .build();
-
-        kafkaTemplate.send(paymentEventsTopic, event.getEventId(), message.getPayload());
-        log.info("Published payment event: {}", event);
+        // Use enhanced service with complete payload data for unified topic
+        paymentKafkaEventService.publishPaymentEventWithCompleteData(transaction, transaction.getStatus());
+        log.info("Published payment event with complete data: transaction {}, status {}", 
+                transaction.getTransactionId(), transaction.getStatus());
     }
 
     @ExecutionTime(operation = "GET_ALL_PAYMENT_TRANSACTIONS", warningThreshold = 800)

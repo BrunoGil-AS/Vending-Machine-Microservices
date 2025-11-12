@@ -138,6 +138,7 @@ public class InventoryService {
                    productId, previousQuantity, updatedStock.getQuantity(), updatedStock.getMinThreshold());
 
         // Determine change type and quantity changed
+        Integer quantityChanged = Math.abs(updatedStock.getQuantity() - previousQuantity);
         String changeType;
         if (updatedStock.getQuantity() > previousQuantity) {
             changeType = "INCREASE";
@@ -148,33 +149,28 @@ public class InventoryService {
         }
 
         // Publish stock update event with complete payload
-        inventoryKafkaEventService.publishStockUpdateEventWithCompleteData(updatedStock, changeType);
+        inventoryKafkaEventService.publishStockUpdateEventWithCompleteData(
+            productId,
+            updatedProduct.getName(),
+            previousQuantity,
+            updatedStock.getQuantity(),
+            quantityChanged,
+            changeType,
+            "Product stock updated via updateProduct",
+            null  // relatedTransactionId (not applicable for manual updates)
+        );
         logger.info("Published stock update event with complete data for product: {}", productId);
 
         // Publish low stock alert if applicable
         if (updatedStock.getQuantity() < updatedStock.getMinThreshold() && updatedStock.getQuantity() > 0) {
-            inventoryKafkaEventService.publishLowStockAlertWithCompleteData(updatedStock, "LOW_STOCK");
-            logger.info("Published low stock alert event with complete data for product: {}", productId);
-        } else if (updatedStock.getQuantity() <= 0) {
-            inventoryKafkaEventService.publishLowStockAlertWithCompleteData(updatedStock, "OUT_OF_STOCK");
-            logger.warn("Published out of stock alert event with complete data for product: {}", productId);
-        }
-
-        return updatedProduct;
-    }
-
-    @Bulkhead(name = "stock-updates", fallbackMethod = "updateStockFallback", type = Bulkhead.Type.SEMAPHORE)
-    @Auditable(operation = "Update Stock", entityType = "Stock", logParameters = true, logResult = true)
-    @ExecutionTime(operation = "updateStock", warningThreshold = 800, detailed = true)
+            inventoryKafkaEventService.publishLowStockAlertWithCompleteData(updatedStock, "LOW_STOCK");Time(operation = "updateStock", warningThreshold = 800, detailed = true)
     public Stock updateStock(Long productId, Integer quantity) {
         logger.info("Updating stock for product ID: {}, quantity change: {}", productId, quantity);
         Stock existingStock = stockRepository.findByProductId(productId)
                 .orElseThrow(() -> new RuntimeException("Stock not found for product id: " + productId));
-
         if (existingStock.getMinThreshold() == null) {
             existingStock.setMinThreshold(5); // Default value for existing stocks
         }
-
         int previousQuantity = existingStock.getQuantity();
         existingStock.setQuantity(existingStock.getQuantity() + quantity);
         Stock updatedStock = stockRepository.save(existingStock);
@@ -183,6 +179,7 @@ public class InventoryService {
                    productId, previousQuantity, updatedStock.getQuantity(), updatedStock.getMinThreshold());
 
         // Determine change type and quantity changed
+        Integer quantityChanged = Math.abs(updatedStock.getQuantity() - previousQuantity);
         String changeType;
         if (updatedStock.getQuantity() > previousQuantity) {
             changeType = "INCREASE";
@@ -193,15 +190,36 @@ public class InventoryService {
         }
 
         // Publish stock update event with complete payload
-        inventoryKafkaEventService.publishStockUpdateEventWithCompleteData(updatedStock, changeType);
+        inventoryKafkaEventService.publishStockUpdateEventWithCompleteData(
+            productId,
+            existingStock.getProduct().getName(),
+            previousQuantity,
+            updatedStock.getQuantity(),
+            quantityChanged,
+            changeType,
+            "Manual stock quantity update",
+            null  // relatedTransactionId (not applicable for manual updates)
+        );
         logger.info("Published stock update event with complete data for product: {}", productId);
 
         // Publish low stock alert if applicable
         if (updatedStock.getQuantity() < updatedStock.getMinThreshold() && updatedStock.getQuantity() > 0) {
-            inventoryKafkaEventService.publishLowStockAlertWithCompleteData(updatedStock, "LOW_STOCK");
+            inventoryKafkaEventService.publishLowStockAlertWithCompleteData(
+                productId,
+                existingStock.getProduct().getName(),
+                updatedStock.getQuantity(),
+                updatedStock.getMinThreshold(),
+                "LOW_STOCK"
+            );
             logger.info("Published low stock alert event with complete data for product: {}", productId);
         } else if (updatedStock.getQuantity() <= 0) {
-            inventoryKafkaEventService.publishLowStockAlertWithCompleteData(updatedStock, "OUT_OF_STOCK");
+            inventoryKafkaEventService.publishLowStockAlertWithCompleteData(
+                productId,
+                existingStock.getProduct().getName(),
+                updatedStock.getQuantity(),
+                updatedStock.getMinThreshold(),
+                "OUT_OF_STOCK"
+            );
             logger.warn("Published out of stock alert event with complete data for product: {}", productId);
         }
 
@@ -209,20 +227,29 @@ public class InventoryService {
     }
 
     public Stock updateStock(Long productId, Stock stock) {
-        logger.info("Updating stock using Stock object for product ID: {}", productId);
+        logger.info("Updating stock details for product ID: {}, new quantity: {}, new threshold: {}",
+                   productId, stock.getQuantity(), stock.getMinThreshold());
         Stock existingStock = stockRepository.findByProductId(productId)
                 .orElseThrow(() -> new RuntimeException("Stock not found for product id: " + productId));
-
+        if (existingStock.getMinThreshold() == null) {
+            existingStock.setMinThreshold(5); // Default value for existing stocks
+        }
         int previousQuantity = existingStock.getQuantity();
         existingStock.setQuantity(stock.getQuantity());
-        existingStock.setMinThreshold(stock.getMinThreshold() != null ? stock.getMinThreshold() : existingStock.getMinThreshold());
-
+        
+        // Set default minThreshold if not provided
+        Integer minThreshold = stock.getMinThreshold();
+        if (minThreshold == null) {
+            minThreshold = existingStock.getMinThreshold() != null ? existingStock.getMinThreshold() : 5;
+        }
+        existingStock.setMinThreshold(minThreshold);
+        
         Stock updatedStock = stockRepository.save(existingStock);
-
-        logger.info("Stock updated using Stock object for product ID: {}. Previous: {}, New: {}, Min threshold: {}",
+        logger.info("Stock details updated for product ID: {}. Previous quantity: {}, New quantity: {}, Min threshold: {}",
                    productId, previousQuantity, updatedStock.getQuantity(), updatedStock.getMinThreshold());
 
         // Determine change type and quantity changed
+        Integer quantityChanged = Math.abs(updatedStock.getQuantity() - previousQuantity);
         String changeType;
         if (updatedStock.getQuantity() > previousQuantity) {
             changeType = "INCREASE";
@@ -233,15 +260,36 @@ public class InventoryService {
         }
 
         // Publish stock update event with complete payload
-        inventoryKafkaEventService.publishStockUpdateEventWithCompleteData(updatedStock, changeType);
+        inventoryKafkaEventService.publishStockUpdateEventWithCompleteData(
+            productId,
+            existingStock.getProduct().getName(),
+            previousQuantity,
+            updatedStock.getQuantity(),
+            quantityChanged,
+            changeType,
+            "Stock details updated (quantity and threshold)",
+            null  // relatedTransactionId (not applicable for manual updates)
+        );
         logger.info("Published stock update event with complete data for product: {}", productId);
 
         // Publish low stock alert if applicable
         if (updatedStock.getQuantity() < updatedStock.getMinThreshold() && updatedStock.getQuantity() > 0) {
-            inventoryKafkaEventService.publishLowStockAlertWithCompleteData(updatedStock, "LOW_STOCK");
+            inventoryKafkaEventService.publishLowStockAlertWithCompleteData(
+                productId,
+                existingStock.getProduct().getName(),
+                updatedStock.getQuantity(),
+                updatedStock.getMinThreshold(),
+                "LOW_STOCK"
+            );
             logger.info("Published low stock alert event with complete data for product: {}", productId);
         } else if (updatedStock.getQuantity() <= 0) {
-            inventoryKafkaEventService.publishLowStockAlertWithCompleteData(updatedStock, "OUT_OF_STOCK");
+            inventoryKafkaEventService.publishLowStockAlertWithCompleteData(
+                productId,
+                existingStock.getProduct().getName(),
+                updatedStock.getQuantity(),
+                updatedStock.getMinThreshold(),
+                "OUT_OF_STOCK"
+            );
             logger.warn("Published out of stock alert event with complete data for product: {}", productId);
         }
 
@@ -254,18 +302,25 @@ public class InventoryService {
 
         for (Map<String, Object> item : items) {
             Long productId = ((Number) item.get("productId")).longValue();
-            Integer requestedQuantity = (Integer) item.get("quantity");
+            Integer quantity = ((Number) item.get("quantity")).intValue();
 
-            Optional<Stock> stock = stockRepository.findByProductId(productId);
+            logger.debug("Checking availability for product ID: {}, requested quantity: {}", productId, quantity);
 
-            if (stock.isEmpty() || stock.get().getQuantity() < requestedQuantity) {
-                logger.warn("Insufficient stock for product ID: {}. Requested: {}, Available: {}",
-                           productId, requestedQuantity, stock.map(Stock::getQuantity).orElse(0));
+            Optional<Stock> stockOpt = getStockByProductId(productId);
+            if (stockOpt.isEmpty()) {
+                logger.warn("Product ID: {} not found in inventory", productId);
+                return false;
+            }
+
+            Stock stock = stockOpt.get();
+            if (stock.getQuantity() < quantity) {
+                logger.warn("Insufficient stock for product ID: {}. Available: {}, Requested: {}",
+                           productId, stock.getQuantity(), quantity);
                 return false;
             }
         }
 
-        logger.debug("All items are available in inventory");
+        logger.info("All items are available in inventory");
         return true;
     }
 
@@ -277,47 +332,71 @@ public class InventoryService {
      */
     @Bulkhead(name = "inventory-checks", fallbackMethod = "checkMultipleAvailabilityFallback", type = Bulkhead.Type.SEMAPHORE)
     public Map<Long, Map<String, Object>> checkMultipleAvailability(List<Map<String, Object>> items) {
-        logger.debug("Checking multiple availability for {} items", items.size());
+        logger.debug("Checking detailed availability for {} items", items.size());
         
         Map<Long, Map<String, Object>> results = new java.util.HashMap<>();
         
         for (Map<String, Object> item : items) {
             Long productId = ((Number) item.get("productId")).longValue();
-            Integer requestedQuantity = (Integer) item.get("quantity");
-
-            Optional<Stock> stockOpt = stockRepository.findByProductId(productId);
-            Map<String, Object> availability = new java.util.HashMap<>();
+            Integer requestedQuantity = ((Number) item.get("quantity")).intValue();
+            
+            logger.debug("Checking availability for product ID: {}, requested quantity: {}", 
+                        productId, requestedQuantity);
+            
+            Optional<Stock> stockOpt = getStockByProductId(productId);
             
             if (stockOpt.isEmpty()) {
-                availability.put("available", false);
-                availability.put("quantity", 0);
-                availability.put("reason", "Product not found");
-            } else {
-                Stock stock = stockOpt.get();
-                boolean available = stock.getQuantity() >= requestedQuantity;
-                availability.put("available", available);
-                availability.put("quantity", stock.getQuantity());
-                availability.put("reason", available ? "Available" : "Insufficient stock");
+                logger.warn("Product ID: {} not found in inventory", productId);
+                results.put(productId, Map.of(
+                    "available", false,
+                    "quantity", 0,
+                    "reason", "Product not found"
+                ));
+                continue;
             }
             
-            results.put(productId, availability);
+            Stock stock = stockOpt.get();
+            int availableQuantity = stock.getQuantity();
             
-            logger.debug("Availability check for product {}: {}", productId, availability);
+            if (availableQuantity >= requestedQuantity) {
+                logger.debug("Product ID: {} has sufficient stock. Available: {}, Requested: {}", 
+                            productId, availableQuantity, requestedQuantity);
+                results.put(productId, Map.of(
+                    "available", true,
+                    "quantity", availableQuantity,
+                    "reason", "In stock"
+                ));
+            } else {
+                logger.warn("Product ID: {} has insufficient stock. Available: {}, Requested: {}", 
+                           productId, availableQuantity, requestedQuantity);
+                results.put(productId, Map.of(
+                    "available", false,
+                    "quantity", availableQuantity,
+                    "reason", "Insufficient stock"
+                ));
+            }
         }
         
+        logger.info("Availability check completed for {} items", items.size());
         return results;
     }
 
     public void deleteProduct(Long productId) {
         logger.info("Deleting product with ID: {}", productId);
-        
-        // Check if product exists
         if (!productRepository.existsById(productId)) {
+            logger.error("Product with ID: {} not found for deletion", productId);
             throw new RuntimeException("Product not found with id: " + productId);
         }
-        
+        Optional<Stock> stockOpt = stockRepository.findByProductId(productId);
+        Stock stock = stockOpt.orElse(null);
+        if (stock != null) {
+            stockRepository.delete(stock);
+            logger.debug("Stock for product ID: {} deleted", productId);
+        } else {
+            logger.warn("No stock found for product ID: {} during deletion", productId);
+        }
         productRepository.deleteById(productId);
-        logger.info("Product deleted successfully with ID: {}", productId);
+        logger.info("Product with ID: {} deleted successfully", productId);
     }
 
     // Fallback methods for Bulkhead pattern
@@ -327,35 +406,41 @@ public class InventoryService {
      */
     private Map<Long, Map<String, Object>> checkMultipleAvailabilityFallback(List<Map<String, Object>> items, Exception ex) {
         logger.error("Inventory checks bulkhead full for {} items. Error: {}", items.size(), ex.getMessage());
-        logger.warn("Inventory service availability checks at capacity - providing fallback response");
+        logger.warn("Inventory service at capacity - marking all items as unavailable");
         
-        Map<Long, Map<String, Object>> fallbackResults = new java.util.HashMap<>();
+        Map<Long, Map<String, Object>> results = new java.util.HashMap<>();
         for (Map<String, Object> item : items) {
             Long productId = ((Number) item.get("productId")).longValue();
-            Map<String, Object> fallback = Map.of(
+            results.put(productId, Map.of(
                 "available", false,
-                "quantity", 0,
-                "reason", "Service temporarily unavailable"
-            );
-            fallbackResults.put(productId, fallback);
+                "reason", "Inventory service at capacity - please retry",
+                "fallback", true,
+                "requestedQuantity", item.get("quantity")
+            ));
         }
-        
-        return fallbackResults;
+        return results;
     }
 
     /**
      * Fallback method when stock updates bulkhead is full
      */
     private Stock updateStockFallback(Long productId, Integer quantity, Exception ex) {
-        logger.error("Stock updates bulkhead full for product: {}. Error: {}", productId, ex.getMessage());
-        logger.warn("Inventory service stock updates at capacity - rejecting update for product {}", productId);
+        logger.error("Stock updates bulkhead full for product {}. Quantity: {}. Error: {}", 
+                productId, quantity, ex.getMessage());
+        logger.warn("Stock update service at capacity - rejecting stock update for product {}", productId);
         
-        // Return existing stock without updates when bulkhead is full
+        // Return existing stock without changes to indicate failure
         Optional<Stock> existingStock = stockRepository.findByProductId(productId);
         if (existingStock.isPresent()) {
             return existingStock.get();
         } else {
-            throw new RuntimeException("Product " + productId + " not found and service at capacity");
+            // Create a placeholder stock to indicate the failure
+            Stock failureStock = Stock.builder()
+                .product(null) // Will be null to indicate failure
+                .quantity(-1)  // Negative quantity to indicate failure
+                .minThreshold(0)
+                .build();
+            return failureStock;
         }
     }
 }

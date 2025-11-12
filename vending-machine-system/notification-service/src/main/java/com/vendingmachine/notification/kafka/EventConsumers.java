@@ -53,8 +53,9 @@ public class EventConsumers {
         }
     }
 
-    @KafkaListener(topics = "transaction-events", groupId = "notification-service-group",
-                   containerFactory = "transactionEventKafkaListenerContainerFactory")
+    // DISABLED FOR UNIFIED CONSUMER VALIDATION
+    // @KafkaListener(topics = "transaction-events", groupId = "notification-service-group",
+    //                containerFactory = "transactionEventKafkaListenerContainerFactory")
     @Transactional
     @Auditable(operation = "CONSUME_TRANSACTION_EVENT", entityType = "TransactionEvent", logParameters = true)
     @ExecutionTime(operation = "CONSUME_TRANSACTION_EVENT", warningThreshold = 1500)
@@ -102,8 +103,9 @@ public class EventConsumers {
         }
     }
 
-    @KafkaListener(topics = "payment-events", groupId = "notification-service-group",
-                   containerFactory = "paymentEventKafkaListenerContainerFactory")
+    // DISABLED FOR UNIFIED CONSUMER VALIDATION
+    // @KafkaListener(topics = "payment-events", groupId = "notification-service-group",
+    //                containerFactory = "paymentEventKafkaListenerContainerFactory")
     @Transactional
     @Auditable(operation = "CONSUME_PAYMENT_EVENT", entityType = "PaymentEvent", logParameters = true)
     @ExecutionTime(operation = "CONSUME_PAYMENT_EVENT", warningThreshold = 1500)
@@ -151,8 +153,9 @@ public class EventConsumers {
         }
     }
 
-    @KafkaListener(topics = "dispensing-events", groupId = "notification-service-group",
-                   containerFactory = "dispensingEventKafkaListenerContainerFactory")
+    // DISABLED FOR UNIFIED CONSUMER VALIDATION
+    // @KafkaListener(topics = "dispensing-events", groupId = "notification-service-group",
+    //                containerFactory = "dispensingEventKafkaListenerContainerFactory")
     @Transactional
     @Auditable(operation = "CONSUME_DISPENSING_EVENT", entityType = "DispensingEvent", logParameters = true)
     @ExecutionTime(operation = "CONSUME_DISPENSING_EVENT", warningThreshold = 1500)

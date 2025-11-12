@@ -73,7 +73,35 @@ public class KafkaConfig {
         return factory;
     }
 
-    // Unified Event Configuration for Phase 2 Kafka Optimization
+    // ============================================
+    // UNIFIED DOMAIN EVENT CONSUMER (NEW)
+    // ============================================
+    
+    @Bean
+    public ConsumerFactory<String, DomainEvent> domainEventConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "transaction-service-unified-group");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
+        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, DomainEvent.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+        return new DefaultKafkaConsumerFactory<>(props);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, DomainEvent> domainEventKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, DomainEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(domainEventConsumerFactory());
+        factory.setConcurrency(3); // Match topic partitions
+        return factory;
+    }
+
+    // ============================================
+    // UNIFIED EVENT PRODUCER CONFIGURATION
+    // ============================================
     @Bean
     public ProducerFactory<String, DomainEvent> domainEventProducerFactory() {
         Map<String, Object> configProps = new HashMap<>();

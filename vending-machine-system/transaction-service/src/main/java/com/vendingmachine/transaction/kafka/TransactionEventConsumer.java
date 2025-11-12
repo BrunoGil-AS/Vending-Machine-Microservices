@@ -12,7 +12,6 @@ import com.vendingmachine.transaction.transaction.TransactionRepository;
 import com.vendingmachine.transaction.transaction.TransactionStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
@@ -30,8 +29,9 @@ public class TransactionEventConsumer {
     private final ProcessedEventRepository processedEventRepository;
     private final KafkaEventService kafkaEventService;
 
-    @KafkaListener(topics = "payment-events", groupId = "transaction-service-group",
-                   containerFactory = "paymentEventKafkaListenerContainerFactory")
+    // DISABLED FOR UNIFIED CONSUMER VALIDATION
+    // @KafkaListener(topics = "payment-events", groupId = "transaction-service-group",
+    //                containerFactory = "paymentEventKafkaListenerContainerFactory")
     @Transactional
     @Auditable(operation = "CONSUME_PAYMENT_EVENT", entityType = "PaymentEvent", logParameters = true)
     @ExecutionTime(operation = "Process Payment Event", warningThreshold = 2000, detailed = true)
@@ -70,16 +70,8 @@ public class TransactionEventConsumer {
                     // Save transaction first
                     transaction = transactionRepository.save(transaction);
                     
-                    // Publish PROCESSING event to trigger dispensing
-                    com.vendingmachine.common.event.TransactionEvent processingEvent =
-                        new com.vendingmachine.common.event.TransactionEvent(
-                            "txn-processing-" + transaction.getId() + "-" + System.currentTimeMillis(),
-                            transaction.getId(),
-                            "PROCESSING",
-                            transaction.getTotalAmount().doubleValue(),
-                            System.currentTimeMillis()
-                        );
-                    kafkaEventService.publishTransactionEvent(processingEvent);
+                    // Publish PROCESSING event to trigger dispensing with complete data
+                    kafkaEventService.publishTransactionEventWithCompleteData(transaction, "PROCESSING");
                     log.info("Published PROCESSING event for transaction {} to trigger dispensing", transaction.getId());
                     
                 } else if ("FAILED".equals(event.getStatus())) {
@@ -109,8 +101,9 @@ public class TransactionEventConsumer {
         }
     }
 
-    @KafkaListener(topics = "dispensing-events", groupId = "transaction-service-group",
-                   containerFactory = "dispensingEventKafkaListenerContainerFactory")
+    // DISABLED FOR UNIFIED CONSUMER VALIDATION
+    // @KafkaListener(topics = "dispensing-events", groupId = "transaction-service-group",
+    //                containerFactory = "dispensingEventKafkaListenerContainerFactory")
     @Transactional
     @Auditable(operation = "CONSUME_DISPENSING_EVENT", entityType = "DispensingEvent", logParameters = true)
     @ExecutionTime(operation = "Process Dispensing Event", warningThreshold = 2000, detailed = true)
@@ -151,38 +144,22 @@ public class TransactionEventConsumer {
                 // If dispensing failed, mark transaction as failed
                 if ("FAILED".equals(event.getStatus())) {
                     transaction.setStatus(TransactionStatus.FAILED);
-                    transactionRepository.save(transaction);
+                    transaction = transactionRepository.save(transaction);
                     log.error("Dispensing failed for transaction {}, marking as FAILED", event.getTransactionId());
 
-                    // Publish transaction failed event
-                    com.vendingmachine.common.event.TransactionEvent transactionEvent =
-                        new com.vendingmachine.common.event.TransactionEvent(
-                            "txn-failed-" + transaction.getId() + "-" + System.currentTimeMillis(),
-                            transaction.getId(),
-                            "FAILED",
-                            transaction.getTotalAmount().doubleValue(),
-                            System.currentTimeMillis()
-                        );
-                    kafkaEventService.publishTransactionEvent(transactionEvent);
+                    // Publish transaction failed event with complete data
+                    kafkaEventService.publishTransactionEventWithCompleteData(transaction, "FAILED");
                 } else {
                     // Check if all items in the transaction have been successfully dispensed
                     boolean allItemsDispensed = checkAllItemsDispensed(transaction);
 
                     if (allItemsDispensed) {
                         transaction.setStatus(TransactionStatus.COMPLETED);
-                        transactionRepository.save(transaction);
+                        transaction = transactionRepository.save(transaction);
                         log.info("All items dispensed successfully for transaction {}, marking as COMPLETED", event.getTransactionId());
 
-                        // Publish transaction completed event
-                        com.vendingmachine.common.event.TransactionEvent transactionEvent =
-                            new com.vendingmachine.common.event.TransactionEvent(
-                                "txn-completed-" + transaction.getId() + "-" + System.currentTimeMillis(),
-                                transaction.getId(),
-                                "COMPLETED",
-                                transaction.getTotalAmount().doubleValue(),
-                                System.currentTimeMillis()
-                            );
-                        kafkaEventService.publishTransactionEvent(transactionEvent);
+                        // Publish transaction completed event with complete data
+                        kafkaEventService.publishTransactionEventWithCompleteData(transaction, "COMPLETED");
                     } else {
                         log.debug("Transaction {} still has pending items to dispense", event.getTransactionId());
                     }

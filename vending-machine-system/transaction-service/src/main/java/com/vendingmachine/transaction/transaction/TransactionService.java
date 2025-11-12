@@ -11,7 +11,6 @@ import com.vendingmachine.transaction.transaction.dto.PaymentMethod;
 import com.vendingmachine.transaction.kafka.KafkaEventService;
 import com.vendingmachine.transaction.exception.InsufficientStockException;
 import com.vendingmachine.transaction.exception.PaymentFailedException;
-import com.vendingmachine.common.event.TransactionEvent;
 import com.vendingmachine.common.aop.annotation.Auditable;
 import com.vendingmachine.common.aop.annotation.ExecutionTime;
 import lombok.RequiredArgsConstructor;
@@ -77,7 +76,10 @@ public class TransactionService {
             if (!paymentSuccess) {
                 // Payment failed but transaction should be saved for refund/audit purposes
                 savedTransaction.setStatus(TransactionStatus.FAILED);
-                transactionRepository.save(savedTransaction);
+                savedTransaction = transactionRepository.save(savedTransaction);
+                
+                // Publish FAILED event with complete data
+                kafkaEventService.publishTransactionEventWithCompleteData(savedTransaction, "FAILED");
                 
                 log.warn("Payment failed for transaction {}, saved as FAILED for audit", savedTransaction.getId());
                 throw new PaymentFailedException("Payment processing failed - Service unavailable or insufficient funds");
@@ -113,12 +115,13 @@ public class TransactionService {
         }
 
         // Create transaction items
+        final Transaction transactionForItems = savedTransaction; // Final variable for lambda
         List<TransactionItem> items = request.getItems().stream()
                 .map(item -> TransactionItem.builder()
                         .productId(item.getProductId())
                         .quantity(item.getQuantity())
                         .price(getProductPrice(item.getProductId())) // From inventory
-                        .transaction(savedTransaction)
+                        .transaction(transactionForItems)
                         .build())
                 .collect(Collectors.toList());
 
@@ -127,14 +130,8 @@ public class TransactionService {
         Transaction finalTransaction = transactionRepository.save(savedTransaction);
 
         // Publish transaction PROCESSING event to trigger dispensing
-        TransactionEvent transactionEvent = new TransactionEvent(
-            "txn-processing-" + finalTransaction.getId() + "-" + System.currentTimeMillis(),
-            finalTransaction.getId(),
-            "PROCESSING",
-            totalAmount.doubleValue(),
-            System.currentTimeMillis()
-        );
-        kafkaEventService.publishTransactionEvent(transactionEvent);
+        // Using enhanced method with complete transaction data for unified topic
+        kafkaEventService.publishTransactionEventWithCompleteData(finalTransaction, "PROCESSING");
 
         log.info("Purchase transaction initiated with PROCESSING status: {}", finalTransaction.getId());
         return mapToDTO(finalTransaction);
@@ -291,15 +288,8 @@ public class TransactionService {
 
             transactionRepository.save(transaction);
 
-            // Publish compensation event
-            TransactionEvent compensationEvent = new TransactionEvent(
-                "txn-comp-" + transactionId + "-" + System.currentTimeMillis(),
-                transactionId,
-                "COMPENSATED",
-                transaction.getTotalAmount().doubleValue(),
-                System.currentTimeMillis()
-            );
-            kafkaEventService.publishTransactionEvent(compensationEvent);
+            // Publish compensation event with complete transaction data
+            kafkaEventService.publishTransactionEventWithCompleteData(transaction, "COMPENSATED");
 
         } catch (Exception e) {
             log.error("Failed to compensate transaction {}: {}", transactionId, e.getMessage());
