@@ -18,6 +18,7 @@ import java.util.Random;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("unused")
 public class DispensingService {
 
     private final DispensingOperationRepository dispensingRepository;
@@ -62,7 +63,7 @@ public class DispensingService {
 
             try {
                 boolean success = simulateDispensing(item);
-                
+
                 if (success) {
                     dispensing.setStatus("SUCCESS");
                     log.info("Successfully dispensed {} units of product {} for transaction {}",
@@ -74,9 +75,9 @@ public class DispensingService {
                 }
             } catch (HardwareException e) {
                 dispensing.setStatus("FAILED");
-                dispensing.setErrorMessage(String.format("Hardware failure: %s [Component: %s, Operation: %s]", 
+                dispensing.setErrorMessage(String.format("Hardware failure: %s [Component: %s, Operation: %s]",
                         e.getMessage(), e.getHardwareComponent(), e.getOperationType()));
-                log.error("Hardware exception during dispensing for product {} in transaction {}: {}", 
+                log.error("Hardware exception during dispensing for product {} in transaction {}: {}",
                         item.getProductId(), transactionId, e.toString());
                 // Report hardware error
                 hardwareStatusService.reportHardwareError(e.getHardwareComponent(), e.getMessage());
@@ -95,15 +96,17 @@ public class DispensingService {
     private boolean simulateDispensing(DispensingItem item) {
         if (simulationEnabled) {
             log.debug("The value of simulationEnabled is: {}", simulationEnabled);
-            log.debug("Dispensing simulation enabled; running jam simulation with probability: {}, success rate: {} and verification rate: {}", jamProbability, successRate, verificationSuccessRate);
-            
+            log.debug(
+                    "Dispensing simulation enabled; running jam simulation with probability: {}, success rate: {} and verification rate: {}",
+                    jamProbability, successRate, verificationSuccessRate);
+
             // RANDOM: jam probability
             if (random.nextDouble() < jamProbability) {
                 log.warn("Dispensing jam detected for product {}", item.getProductId());
                 hardwareStatusService.reportHardwareError("product_chute", "Jam detected during dispensing");
                 throw HardwareException.productJam(item.getProductId());
             }
-            
+
             boolean dispensed = random.nextDouble() < successRate;
             if (dispensed) {
                 // Verification simulation
@@ -133,7 +136,7 @@ public class DispensingService {
     private void publishDispensingEvent(DispensingOperation dispensing) {
         // Use enhanced service with complete payload data for unified topic
         dispensingKafkaEventService.publishDispensingEventWithCompleteData(dispensing, dispensing.getStatus());
-        log.info("Published dispensing event with complete data: transaction {}, status {}, product {}", 
+        log.info("Published dispensing event with complete data: transaction {}, status {}, product {}",
                 dispensing.getTransactionId(), dispensing.getStatus(), dispensing.getProductId());
     }
 
@@ -155,10 +158,10 @@ public class DispensingService {
      * Fallback method when hardware operations bulkhead is full
      */
     private void dispenseProductsFallback(Long transactionId, List<DispensingItem> items, Exception ex) {
-        log.error("Hardware operations bulkhead full for transaction: {}. Error: {}", 
+        log.error("Hardware operations bulkhead full for transaction: {}. Error: {}",
                 transactionId, ex.getMessage());
         log.warn("Dispensing service hardware operations at capacity - rejecting transaction {}", transactionId);
-        
+
         // Create failed dispensing operations for all items
         for (DispensingItem item : items) {
             DispensingOperation failedDispensing = new DispensingOperation();
@@ -167,7 +170,7 @@ public class DispensingService {
             failedDispensing.setQuantity(item.getQuantity());
             failedDispensing.setStatus("FAILED_CAPACITY");
             failedDispensing.setErrorMessage("Dispensing service at capacity - hardware operations bulkhead full");
-            
+
             dispensingRepository.save(failedDispensing);
             publishDispensingEvent(failedDispensing);
         }
@@ -182,9 +185,11 @@ public class DispensingService {
     }
 
     /**
-     * Fallback method when database operations bulkhead is full for specific transaction
+     * Fallback method when database operations bulkhead is full for specific
+     * transaction
      */
-    private List<DispensingOperation> getDispensingTransactionsByTransactionIdFallback(Long transactionId, Exception ex) {
+    private List<DispensingOperation> getDispensingTransactionsByTransactionIdFallback(Long transactionId,
+            Exception ex) {
         log.error("Database operations bulkhead full for transaction {}. Error: {}", transactionId, ex.getMessage());
         return List.of(); // Return empty list when database is at capacity
     }

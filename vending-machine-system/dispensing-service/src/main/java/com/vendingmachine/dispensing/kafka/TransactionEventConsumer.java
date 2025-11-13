@@ -14,7 +14,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
@@ -36,18 +35,19 @@ public class TransactionEventConsumer {
     @Value("${services.transaction.url:http://localhost:8083}")
     private String transactionServiceUrl;
 
-    // @KafkaListener(topics = "transaction-events", groupId = "dispensing-service-group",
-    //                containerFactory = "transactionEventKafkaListenerContainerFactory")
+    // @KafkaListener(topics = "transaction-events", groupId =
+    // "dispensing-service-group",
+    // containerFactory = "transactionEventKafkaListenerContainerFactory")
     @Transactional
     @Auditable(operation = "CONSUME_TRANSACTION_EVENT", entityType = "TransactionEvent", logParameters = true)
     @ExecutionTime(operation = "CONSUME_TRANSACTION_EVENT", warningThreshold = 2500)
     public void consumeTransactionEvent(@Payload TransactionEvent event,
-                                       @Header(value = "X-Correlation-ID", required = false) String correlationId) {
+            @Header(value = "X-Correlation-ID", required = false) String correlationId) {
         try {
             if (correlationId != null) {
                 CorrelationIdUtil.setCorrelationId(correlationId);
             }
-            
+
             log.info("Received transaction event: {} for transaction {} with status {}",
                     event.getEventId(), event.getTransactionId(), event.getStatus());
 
@@ -83,16 +83,16 @@ public class TransactionEventConsumer {
             HttpEntity<?> entity = new HttpEntity<>(headers);
 
             ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
-                url, HttpMethod.GET, entity, new ParameterizedTypeReference<List<Map<String, Object>>>() {});
+                    url, HttpMethod.GET, entity, new ParameterizedTypeReference<List<Map<String, Object>>>() {
+                    });
 
             List<Map<String, Object>> items = response.getBody();
             if (items != null && !items.isEmpty()) {
                 return items.stream()
-                    .map(item -> new DispensingItem(
-                        ((Number) item.get("productId")).longValue(),
-                        ((Number) item.get("quantity")).intValue()
-                    ))
-                    .collect(Collectors.toList());
+                        .map(item -> new DispensingItem(
+                                ((Number) item.get("productId")).longValue(),
+                                ((Number) item.get("quantity")).intValue()))
+                        .collect(Collectors.toList());
             }
             return List.of();
         } catch (Exception e) {

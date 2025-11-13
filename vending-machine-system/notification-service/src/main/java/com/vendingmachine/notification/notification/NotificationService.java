@@ -14,6 +14,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("unused")
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
@@ -23,7 +24,7 @@ public class NotificationService {
     @Auditable(operation = "CREATE_NOTIFICATION", entityType = "Notification", logParameters = true)
     @ExecutionTime(operation = "CREATE_NOTIFICATION", warningThreshold = 800, detailed = true)
     public Notification createNotification(NotificationType type, String message, String details,
-                                         Long entityId, String entityType, String severity) {
+            Long entityId, String entityType, String severity) {
         Notification notification = new Notification();
         notification.setType(type);
         notification.setMessage(message);
@@ -95,14 +96,15 @@ public class NotificationService {
     // Fallback methods for Bulkhead pattern
 
     /**
-     * Fallback method when database operations bulkhead is full for creating notifications
+     * Fallback method when database operations bulkhead is full for creating
+     * notifications
      */
     private Notification createNotificationFallback(NotificationType type, String message, String details,
-                                                   Long entityId, String entityType, String severity, Exception ex) {
-        log.error("Database operations bulkhead full for creating notification. Type: {}, Message: {}. Error: {}", 
+            Long entityId, String entityType, String severity, Exception ex) {
+        log.error("Database operations bulkhead full for creating notification. Type: {}, Message: {}. Error: {}",
                 type, message, ex.getMessage());
         log.warn("Notification service database operations at capacity - creating fallback notification");
-        
+
         // Create a temporary notification without saving to database
         Notification failbackNotification = new Notification();
         failbackNotification.setId(-1L); // Negative ID to indicate fallback
@@ -113,12 +115,13 @@ public class NotificationService {
         failbackNotification.setEntityType(entityType);
         failbackNotification.setSeverity("HIGH"); // Escalate severity due to capacity issues
         failbackNotification.setStatus("FALLBACK");
-        
+
         return failbackNotification;
     }
 
     /**
-     * Fallback method when database operations bulkhead is full for getting all notifications
+     * Fallback method when database operations bulkhead is full for getting all
+     * notifications
      */
     private List<Notification> getAllNotificationsFallback(Exception ex) {
         log.error("Database operations bulkhead full for getAllNotifications. Error: {}", ex.getMessage());
@@ -127,7 +130,8 @@ public class NotificationService {
     }
 
     /**
-     * Fallback method when database operations bulkhead is full for getting unread notifications
+     * Fallback method when database operations bulkhead is full for getting unread
+     * notifications
      */
     private List<Notification> getUnreadNotificationsFallback(Exception ex) {
         log.error("Database operations bulkhead full for getUnreadNotifications. Error: {}", ex.getMessage());

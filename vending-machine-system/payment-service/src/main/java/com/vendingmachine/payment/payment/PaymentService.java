@@ -21,6 +21,7 @@ import java.util.Random;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("unused")
 public class PaymentService {
 
     private final PaymentTransactionRepository transactionRepository;
@@ -38,20 +39,24 @@ public class PaymentService {
     @Bulkhead(name = "payment-processing", fallbackMethod = "processPaymentFallback", type = Bulkhead.Type.SEMAPHORE)
     @Auditable(operation = "PROCESS_PAYMENT_FOR_TRANSACTION", entityType = "Payment", logParameters = true)
     @ExecutionTime(operation = "PROCESS_PAYMENT_FOR_TRANSACTION", warningThreshold = 1000, detailed = true)
-    public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent, PaymentRequest paymentRequest) {
+    public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent,
+            PaymentRequest paymentRequest) {
         return processPaymentForTransaction(transactionEvent, paymentRequest, false);
     }
-    
+
     @Transactional
     @Bulkhead(name = "payment-processing", fallbackMethod = "processPaymentWithEventFallback", type = Bulkhead.Type.SEMAPHORE)
     @Auditable(operation = "PROCESS_PAYMENT_WITH_EVENT", entityType = "Payment", logParameters = true)
     @ExecutionTime(operation = "PROCESS_PAYMENT_WITH_EVENT", warningThreshold = 1200, detailed = true)
-    public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent, PaymentRequest paymentRequest, boolean publishEvent) {
+    public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent,
+            PaymentRequest paymentRequest, boolean publishEvent) {
         log.info("Processing payment for transaction: {} with amount {} and method {}",
-                transactionEvent.getTransactionId(), transactionEvent.getTotalAmount(), paymentRequest.getPaymentMethod());
+                transactionEvent.getTransactionId(), transactionEvent.getTotalAmount(),
+                paymentRequest.getPaymentMethod());
 
         // Check if payment already exists for this transaction
-        Optional<PaymentTransaction> existingPayment = transactionRepository.findByTransactionId(transactionEvent.getTransactionId());
+        Optional<PaymentTransaction> existingPayment = transactionRepository
+                .findByTransactionId(transactionEvent.getTransactionId());
         if (existingPayment.isPresent()) {
             log.warn("Payment already exists for transaction {}", transactionEvent.getTransactionId());
             return existingPayment.get();
@@ -90,12 +95,14 @@ public class PaymentService {
     @Auditable(operation = "PROCESS_PAYMENT_FROM_KAFKA", entityType = "Payment", logParameters = true)
     @ExecutionTime(operation = "PROCESS_PAYMENT_FROM_KAFKA", warningThreshold = 1200, detailed = true)
     public PaymentTransaction processPaymentForTransaction(TransactionEvent transactionEvent) {
-        // Backward compatibility method for Kafka events - defaults to credit card and publishes events
+        // Backward compatibility method for Kafka events - defaults to credit card and
+        // publishes events
         PaymentRequest defaultRequest = new PaymentRequest();
         defaultRequest.setTransactionId(transactionEvent.getTransactionId());
         defaultRequest.setPaymentMethod(PaymentMethod.CREDIT_CARD);
         defaultRequest.setAmount(BigDecimal.valueOf(transactionEvent.getTotalAmount()));
-        return processPaymentForTransaction(transactionEvent, defaultRequest, true); // Enable event publishing for async flow
+        return processPaymentForTransaction(transactionEvent, defaultRequest, true); // Enable event publishing for
+                                                                                     // async flow
     }
 
     @ExecutionTime(operation = "SIMULATE_PAYMENT", warningThreshold = 300)
@@ -124,7 +131,7 @@ public class PaymentService {
     private void publishPaymentEvent(PaymentTransaction transaction) {
         // Use enhanced service with complete payload data for unified topic
         paymentKafkaEventService.publishPaymentEventWithCompleteData(transaction, transaction.getStatus());
-        log.info("Published payment event with complete data: transaction {}, status {}", 
+        log.info("Published payment event with complete data: transaction {}, status {}",
                 transaction.getTransactionId(), transaction.getStatus());
     }
 
@@ -136,51 +143,51 @@ public class PaymentService {
     @ExecutionTime(operation = "GET_PAYMENT_STATUS_FOR_TRANSACTION", warningThreshold = 500)
     public Map<String, Object> getPaymentStatusForTransaction(String transactionId) {
         log.debug("Checking payment status for transaction: {}", transactionId);
-        
-        Optional<PaymentTransaction> paymentOpt = transactionRepository.findByTransactionId(Long.valueOf(transactionId));
-        
+
+        Optional<PaymentTransaction> paymentOpt = transactionRepository
+                .findByTransactionId(Long.valueOf(transactionId));
+
         if (paymentOpt.isEmpty()) {
             log.warn("No payment record found for transaction: {}", transactionId);
             return Map.of(
-                "exists", false,
-                "status", "NOT_FOUND",
-                "transactionId", transactionId
-            );
+                    "exists", false,
+                    "status", "NOT_FOUND",
+                    "transactionId", transactionId);
         }
-        
+
         PaymentTransaction payment = paymentOpt.get();
-        
+
         Map<String, Object> status = Map.of(
-            "exists", true,
-            "status", payment.getStatus(),
-            "success", "SUCCESS".equals(payment.getStatus()),
-            "transactionId", transactionId,
-            "amount", payment.getAmount(),
-            "method", payment.getMethod().name(),
-            "createdAt", payment.getCreatedAt(),
-            "updatedAt", payment.getUpdatedAt()
-        );
-        
+                "exists", true,
+                "status", payment.getStatus(),
+                "success", "SUCCESS".equals(payment.getStatus()),
+                "transactionId", transactionId,
+                "amount", payment.getAmount(),
+                "method", payment.getMethod().name(),
+                "createdAt", payment.getCreatedAt(),
+                "updatedAt", payment.getUpdatedAt());
+
         log.debug("Payment status for transaction {}: {}", transactionId, payment.getStatus());
         return status;
     }
 
     // Fallback methods for Bulkhead pattern
-    
+
     /**
      * Fallback method when payment processing bulkhead is full
      */
-    private PaymentTransaction processPaymentFallback(TransactionEvent transactionEvent, PaymentRequest paymentRequest, Exception ex) {
-        log.error("Payment processing bulkhead full for transaction: {}. Error: {}", 
+    private PaymentTransaction processPaymentFallback(TransactionEvent transactionEvent, PaymentRequest paymentRequest,
+            Exception ex) {
+        log.error("Payment processing bulkhead full for transaction: {}. Error: {}",
                 transactionEvent.getTransactionId(), ex.getMessage());
         log.warn("Payment service at capacity - rejecting transaction {}", transactionEvent.getTransactionId());
-        
+
         PaymentTransaction failedTransaction = new PaymentTransaction();
         failedTransaction.setTransactionId(transactionEvent.getTransactionId());
         failedTransaction.setAmount(transactionEvent.getTotalAmount());
         failedTransaction.setMethod(paymentRequest.getPaymentMethod());
         failedTransaction.setStatus("FAILED_CAPACITY");
-        
+
         // Save the failed transaction for tracking
         return transactionRepository.save(failedTransaction);
     }
@@ -188,8 +195,9 @@ public class PaymentService {
     /**
      * Fallback method when payment processing with event bulkhead is full
      */
-    private PaymentTransaction processPaymentWithEventFallback(TransactionEvent transactionEvent, PaymentRequest paymentRequest, boolean publishEvent, Exception ex) {
-        log.error("Payment processing with event bulkhead full for transaction: {}. Error: {}", 
+    private PaymentTransaction processPaymentWithEventFallback(TransactionEvent transactionEvent,
+            PaymentRequest paymentRequest, boolean publishEvent, Exception ex) {
+        log.error("Payment processing with event bulkhead full for transaction: {}. Error: {}",
                 transactionEvent.getTransactionId(), ex.getMessage());
         return processPaymentFallback(transactionEvent, paymentRequest, ex);
     }
@@ -198,17 +206,17 @@ public class PaymentService {
      * Fallback method when Kafka processing bulkhead is full
      */
     private PaymentTransaction processPaymentFromKafkaFallback(TransactionEvent transactionEvent, Exception ex) {
-        log.error("Kafka payment processing bulkhead full for transaction: {}. Error: {}", 
+        log.error("Kafka payment processing bulkhead full for transaction: {}. Error: {}",
                 transactionEvent.getTransactionId(), ex.getMessage());
-        log.warn("Payment service Kafka processing at capacity - rejecting transaction {}", 
+        log.warn("Payment service Kafka processing at capacity - rejecting transaction {}",
                 transactionEvent.getTransactionId());
-        
+
         PaymentTransaction failedTransaction = new PaymentTransaction();
         failedTransaction.setTransactionId(transactionEvent.getTransactionId());
         failedTransaction.setAmount(transactionEvent.getTotalAmount());
         failedTransaction.setMethod(PaymentMethod.CREDIT_CARD); // Default method
         failedTransaction.setStatus("FAILED_CAPACITY_KAFKA");
-        
+
         // Save the failed transaction for tracking and manual processing
         return transactionRepository.save(failedTransaction);
     }
