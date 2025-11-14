@@ -42,18 +42,17 @@ public class UnifiedEventConsumer {
     @Value("${services.transaction.url:http://localhost:8083}")
     private String transactionServiceUrl;
 
-    @KafkaListener(topics = "vending-machine-domain-events", groupId = "dispensing-service-unified-group",
-                   containerFactory = "unifiedEventKafkaListenerContainerFactory")
+    @KafkaListener(topics = "vending-machine-domain-events", groupId = "dispensing-service-unified-group", containerFactory = "unifiedEventKafkaListenerContainerFactory")
     @Transactional
     @Auditable(operation = "CONSUME_UNIFIED_EVENT", entityType = "DomainEvent", logParameters = true)
     @ExecutionTime(operation = "CONSUME_UNIFIED_EVENT", warningThreshold = 2500)
     public void consumeUnifiedEvent(@Payload DomainEvent event,
-                                   @Header(value = "X-Correlation-ID", required = false) String correlationId) {
+            @Header(value = "X-Correlation-ID", required = false) String correlationId) {
         try {
             if (correlationId != null) {
                 CorrelationIdUtil.setCorrelationId(correlationId);
             }
-            
+
             log.info("Received unified event: {} from source: {} with type: {}",
                     event.getEventId(), event.getSource(), event.getEventType());
 
@@ -64,15 +63,20 @@ public class UnifiedEventConsumer {
             }
 
             try {
+                log.debug("\n\nProcessing unified event: {}\n\n", event);
+
                 // Only process TRANSACTION events from transaction service
-                if ("TRANSACTION".equals(event.getEventType()) && "transaction-service".equals(event.getSource())) {
-                    TransactionEvent transactionEvent = objectMapper.convertValue(event.getPayload(), TransactionEvent.class);
-                    
+                if ("TRANSACTION_PROCESSING".equals(event.getEventType())
+                        && "transaction-service".equals(event.getSource())) {
+                    TransactionEvent transactionEvent = objectMapper.readValue((String) event.getPayload(),
+                            TransactionEvent.class);
+
                     if ("PROCESSING".equals(transactionEvent.getStatus())) {
                         // Transaction is ready for dispensing - get transaction items
                         List<DispensingItem> items = getTransactionItems(transactionEvent.getTransactionId());
                         if (!items.isEmpty()) {
-                            dispensingService.dispenseProductsForTransaction(transactionEvent.getTransactionId(), items);
+                            dispensingService.dispenseProductsForTransaction(transactionEvent.getTransactionId(),
+                                    items);
                             log.info("Dispensing initiated for transaction {}", transactionEvent.getTransactionId());
                         } else {
                             log.warn("No items found for transaction {}", transactionEvent.getTransactionId());
@@ -86,12 +90,12 @@ public class UnifiedEventConsumer {
 
                 // Mark event as processed
                 ProcessedEvent processedEvent = ProcessedEvent.builder()
-                    .eventId(event.getEventId())
-                    .eventType(event.getEventType())
-                    .source(event.getSource())
-                    .build();
+                        .eventId(event.getEventId())
+                        .eventType(event.getEventType())
+                        .source(event.getSource())
+                        .build();
                 processedEventRepository.save(processedEvent);
-                
+
             } catch (Exception e) {
                 log.error("Failed to process unified event: {}", event.getEventId(), e);
                 throw new RuntimeException("Failed to process unified event", e);
@@ -111,16 +115,16 @@ public class UnifiedEventConsumer {
             HttpEntity<?> entity = new HttpEntity<>(headers);
 
             ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
-                url, HttpMethod.GET, entity, new ParameterizedTypeReference<List<Map<String, Object>>>() {});
+                    url, HttpMethod.GET, entity, new ParameterizedTypeReference<List<Map<String, Object>>>() {
+                    });
 
             List<Map<String, Object>> items = response.getBody();
             if (items != null && !items.isEmpty()) {
                 return items.stream()
-                    .map(item -> new DispensingItem(
-                        ((Number) item.get("productId")).longValue(),
-                        ((Number) item.get("quantity")).intValue()
-                    ))
-                    .collect(Collectors.toList());
+                        .map(item -> new DispensingItem(
+                                ((Number) item.get("productId")).longValue(),
+                                ((Number) item.get("quantity")).intValue()))
+                        .collect(Collectors.toList());
             }
             return List.of();
         } catch (Exception e) {
