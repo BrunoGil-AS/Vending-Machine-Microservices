@@ -1,0 +1,29 @@
+# Logs directory
+logs/
+
+# Environment files
+.env
+
+# Docker volumes data
+data/
+
+# Temporary files
+*.tmp
+*.temp
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+
+# Test outputs
+test-output/
+test-results/
