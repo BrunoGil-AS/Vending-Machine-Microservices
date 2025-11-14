@@ -78,6 +78,7 @@ public class UnifiedTransactionEventConsumer {
                     break;
                     
                 // Dispensing Events
+                case "DISPENSING_SUCCESS":
                 case "DISPENSING_COMPLETED":
                 case "DISPENSING_FAILED":
                 case "DISPENSING_PARTIAL":
@@ -156,10 +157,22 @@ public class UnifiedTransactionEventConsumer {
      */
     private void handleDispensingEvent(DomainEvent event) {
         try {
+            log.info("Starting to process dispensing event: {}", event.getEventId());
+            log.debug("Raw event payload: {}", event.getPayload());
+            
             DispensingPayload payload = parsePayload(event.getPayload(), DispensingPayload.class);
             
             log.info("Processing unified dispensing event: {} for transaction {} product {} status {}",
                     event.getEventId(), payload.getTransactionId(), payload.getProductId(), payload.getStatus());
+            
+            // Detailed payload validation
+            if (payload.getTransactionId() == null) {
+                log.error("Transaction ID is null in dispensing payload: {}", event.getPayload());
+                throw new IllegalArgumentException("Transaction ID cannot be null");
+            }
+            
+            log.debug("Payload details: transactionId={}, productId={}, dispensedQuantity={}, status={}", 
+                     payload.getTransactionId(), payload.getProductId(), payload.getDispensedQuantity(), payload.getStatus());
 
             // Check for duplicate event processing using domain event ID
             if (processedEventRepository.existsByEventIdAndEventType(event.getEventId(), "UNIFIED_DISPENSING_EVENT")) {
@@ -167,6 +180,7 @@ public class UnifiedTransactionEventConsumer {
                 return;
             }
 
+            log.debug("Looking for transaction with ID: {}", payload.getTransactionId());
             Optional<Transaction> transactionOpt = transactionRepository.findById(payload.getTransactionId());
             if (transactionOpt.isEmpty()) {
                 log.warn("Transaction {} not found for dispensing event {}", payload.getTransactionId(), event.getEventId());
@@ -174,6 +188,8 @@ public class UnifiedTransactionEventConsumer {
             }
 
             Transaction transaction = transactionOpt.get();
+            log.debug("Found transaction: id={}, status={}, totalAmount={}", 
+                     transaction.getId(), transaction.getStatus(), transaction.getTotalAmount());
 
             // Only process if transaction is in PROCESSING state
             if (transaction.getStatus() != TransactionStatus.PROCESSING) {
@@ -182,22 +198,35 @@ public class UnifiedTransactionEventConsumer {
                 return;
             }
 
+            log.info("Transaction {} is in PROCESSING state, proceeding with dispensing event handling", transaction.getId());
+
             // Handle dispensing outcome
             if ("DISPENSING_FAILED".equals(event.getEventType())) {
+                log.warn("Processing DISPENSING_FAILED event for transaction {}", transaction.getId());
                 transaction.setStatus(TransactionStatus.FAILED);
-                transactionRepository.save(transaction);
+                transaction = transactionRepository.save(transaction);
+                log.info("Transaction {} status updated to FAILED", transaction.getId());
                 
                 kafkaEventService.publishTransactionEventWithCompleteData(transaction, "FAILED");
                 log.warn("Transaction {} marked as FAILED due to dispensing failure: {}", 
                          transaction.getId(), payload.getFailureReason());
-            } else if ("DISPENSING_COMPLETED".equals(event.getEventType())) {
+            } else if ("DISPENSING_COMPLETED".equals(event.getEventType()) || "DISPENSING_SUCCESS".equals(event.getEventType())) {
+                log.info("Processing DISPENSING_SUCCESS/COMPLETED event for transaction {}", transaction.getId());
+                
                 // Check if all items are dispensed (simplified logic)
-                if (checkAllItemsDispensed(transaction)) {
+                boolean allItemsDispensed = checkAllItemsDispensed(transaction);
+                log.debug("All items dispensed check result: {}", allItemsDispensed);
+                
+                if (allItemsDispensed) {
+                    log.info("All items dispensed for transaction {}, updating status to COMPLETED", transaction.getId());
                     transaction.setStatus(TransactionStatus.COMPLETED);
-                    transactionRepository.save(transaction);
+                    transaction = transactionRepository.save(transaction);
+                    log.info("Transaction {} successfully saved with COMPLETED status", transaction.getId());
                     
                     kafkaEventService.publishTransactionEventWithCompleteData(transaction, "COMPLETED");
                     log.info("Transaction {} completed successfully after dispensing", transaction.getId());
+                } else {
+                    log.debug("Not all items dispensed yet for transaction {}", transaction.getId());
                 }
             } else if ("DISPENSING_PARTIAL".equals(event.getEventType())) {
                 // For partial dispensing, we might want to update status but keep it processing
@@ -207,6 +236,7 @@ public class UnifiedTransactionEventConsumer {
                 // In a real system, this would need more sophisticated logic
             }
 
+            log.debug("Creating ProcessedEvent record for event: {}", event.getEventId());
             // Mark event as processed
             ProcessedEvent processedEvent = ProcessedEvent.builder()
                     .eventId(event.getEventId())
@@ -215,11 +245,14 @@ public class UnifiedTransactionEventConsumer {
                     .processedAt(LocalDateTime.now())
                     .build();
             processedEventRepository.save(processedEvent);
+            log.debug("ProcessedEvent saved successfully for event: {}", event.getEventId());
 
             log.info("Successfully processed unified dispensing event: {}", event.getEventId());
 
         } catch (Exception e) {
-            log.error("Failed to process unified dispensing event: {}", event.getEventId(), e);
+            log.error("Failed to process unified dispensing event: {} - Error details: {}", event.getEventId(), e.getMessage(), e);
+            log.error("Event details - eventId: {}, eventType: {}, source: {}, aggregateId: {}", 
+                     event.getEventId(), event.getEventType(), event.getSource(), event.getAggregateId());
             throw new RuntimeException("Failed to process unified dispensing event", e);
         }
     }
@@ -240,9 +273,20 @@ public class UnifiedTransactionEventConsumer {
      */
     private <T> T parsePayload(String payloadJson, Class<T> payloadClass) {
         try {
-            return objectMapper.readValue(payloadJson, payloadClass);
+            log.debug("Attempting to parse payload for class {}: {}", payloadClass.getSimpleName(), payloadJson);
+            
+            if (payloadJson == null || payloadJson.trim().isEmpty()) {
+                log.error("Payload JSON is null or empty for class {}", payloadClass.getSimpleName());
+                throw new IllegalArgumentException("Payload JSON cannot be null or empty");
+            }
+            
+            T result = objectMapper.readValue(payloadJson, payloadClass);
+            log.debug("Successfully parsed payload for class {}: {}", payloadClass.getSimpleName(), result);
+            
+            return result;
         } catch (Exception e) {
             log.error("Failed to parse payload for class {}: {}", payloadClass.getSimpleName(), payloadJson, e);
+            log.error("Parse error details: {}", e.getMessage());
             throw new RuntimeException("Failed to parse event payload", e);
         }
     }
