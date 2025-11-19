@@ -61,6 +61,24 @@ public class ProductController {
         }
     }
 
+    @GetMapping("/admin/inventory/products/{productId}")
+    @Auditable(operation = "ADMIN_GET_PRODUCT_BY_ID", entityType = "Product", logParameters = true)
+    @ExecutionTime(operation = "Admin Get Product by ID", warningThreshold = 1000)
+    public ResponseEntity<Product> getProductAdmin(
+            @PathVariable Long productId,
+            @RequestHeader(value = "X-Correlation-ID", required = false) String correlationId) {
+        CorrelationIdUtil.setCorrelationId(correlationId);
+        try {
+            logger.info("Received admin request to get product with ID: {}", productId);
+            Product product = inventoryService.getProductById(productId)
+                    .orElseThrow(() -> new ProductNotFoundException("Product not found with id: " + productId));
+            logger.info("Returning product with ID: {} (admin endpoint)", productId);
+            return ResponseEntity.ok(product);
+        } finally {
+            CorrelationIdUtil.clearCorrelationId();
+        }
+    }
+
     @PostMapping("/inventory/check-availability")
     @Auditable(operation = "CHECK_AVAILABILITY", entityType = "Inventory", logParameters = true, logResult = true)
     @ExecutionTime(operation = "Check Availability", warningThreshold = 800, detailed = true)

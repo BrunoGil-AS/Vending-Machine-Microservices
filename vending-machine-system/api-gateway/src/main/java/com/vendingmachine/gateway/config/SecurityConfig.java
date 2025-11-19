@@ -42,6 +42,7 @@ public class SecurityConfig {
                         .pathMatchers("/favicon.ico/**").permitAll()
                         .pathMatchers("/api/auth/login").permitAll()
                         .pathMatchers("/api/inventory/products").permitAll()
+                        .pathMatchers("/api/inventory/products/**").permitAll()
                         .pathMatchers("/api/inventory/availability/**").permitAll()
                         .pathMatchers("/api/transaction/purchase").permitAll()
                         .pathMatchers("/api/transactions/status/**").permitAll()
